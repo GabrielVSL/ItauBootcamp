@@ -2,8 +2,8 @@
 
 import React from "react";
 import Image from "next/image";
-import { AudioLines } from "lucide-react";
 import { FaJava } from "react-icons/fa6";
+import { RiOpenaiFill } from "react-icons/ri";
 import { SiSpringboot } from "react-icons/si";
 import { Grainient } from "@/components/landing/Grainient";
 import {
@@ -21,9 +21,8 @@ function HighlightIcon({ id }: { id: HeroHighlight["id"] }) {
     );
   }
   return (
-    <AudioLines
-      className="h-[19px] w-[19px] text-[#FF6200]"
-      strokeWidth={1.85}
+    <RiOpenaiFill
+      className="h-[21px] w-[21px] text-[#FF6200]"
       aria-hidden="true"
     />
   );

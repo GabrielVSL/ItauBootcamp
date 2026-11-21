@@ -18,6 +18,6 @@ export const HERO_HIGHLIGHTS: HeroHighlight[] = [
   {
     id: "ai",
     title: "IA & Voz",
-    subtitle: "LLMs e Agentes",
+    subtitle: "OpenAI & Whisper",
   },
 ];

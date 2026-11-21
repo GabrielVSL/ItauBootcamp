@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" role="img" aria-label="Arquitetura do Portal Unificado — Next.js BFF integrando Finance-AI-Service e CheckoutService com Neon PostgreSQL">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#120F17" />
+      <stop offset="55%" stop-color="#18121E" />
+      <stop offset="100%" stop-color="#221414" />
+    </linearGradient>
+    <radialGradient id="orangeGlow" cx="85%" cy="15%" r="55%">
+      <stop offset="0%" stop-color="#FF6200" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#FF6200" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="orangeBadge" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6200" />
+      <stop offset="100%" stop-color="#FF8A3D" />
+    </linearGradient>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill="#FF8A3D" />
+    </marker>
+    <marker id="arrowEmerald" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill="#34D399" />
+    </marker>
+    <marker id="arrowSky" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill="#38BDF8" />
+    </marker>
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    </style>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="1200" height="620" rx="24" fill="url(#bgGrad)" />
+  <rect width="1200" height="620" rx="24" fill="url(#orangeGlow)" />
+  <rect x="1" y="1" width="1198" height="618" rx="23" fill="none" stroke="#2D2638" stroke-width="1.5" />
+
+  <!-- Header -->
+  <rect x="36" y="28" width="196" height="28" rx="14" fill="#FF6200" fill-opacity="0.16" stroke="#FF6200" stroke-opacity="0.45" />
+  <text x="134" y="46" text-anchor="middle" class="sans" font-size="11.5" font-weight="700" fill="#FFA066" letter-spacing="0.6">ARQUITETURA EM PRODUÇÃO</text>
+  <text x="36" y="88" class="sans" font-size="25" font-weight="700" fill="#FFFFFF">Ecossistema BFF + Microsserviços + Database per Service</text>
+  <text x="36" y="112" class="sans" font-size="13.5" fill="#A8A2B3">Segurança na borda, orquestração cross-service e isolamento completo entre domínios de Finanças IA e Checkout</text>
+
+  <!-- Column 1: Browser / Client -->
+  <g transform="translate(36, 150)">
+    <rect width="215" height="390" rx="18" fill="#1C1726" stroke="#322B40" stroke-width="1.5" />
+    <rect x="16" y="16" width="84" height="22" rx="11" fill="#38BDF8" fill-opacity="0.16" />
+    <text x="58" y="31" text-anchor="middle" class="sans" font-size="10.5" font-weight="700" fill="#7DD3FC">CLIENTE</text>
+
+    <text x="18" y="66" class="sans" font-size="17" font-weight="700" fill="#FFFFFF">Navegador Web</text>
+    <text x="18" y="86" class="sans" font-size="12" fill="#9E97AC">Next.js 15 · React 19 UI</text>
+
+    <line x1="18" y1="104" x2="197" y2="104" stroke="#2D2638" />
+
+    <g transform="translate(18, 122)">
+      <rect width="179" height="46" rx="10" fill="#251F31" stroke="#362E45" />
+      <text x="12" y="20" class="sans" font-size="12" font-weight="600" fill="#FFFFFF">Landing + Cold Start</text>
+      <text x="12" y="36" class="sans" font-size="10.5" fill="#A8A2B3">Acorda APIs em 2º plano</text>
+    </g>
+
+    <g transform="translate(18, 180)">
+      <rect width="179" height="46" rx="10" fill="#251F31" stroke="#362E45" />
+      <text x="12" y="20" class="sans" font-size="12" font-weight="600" fill="#FFFFFF">Loja GoF &amp; Finanças</text>
+      <text x="12" y="36" class="sans" font-size="10.5" fill="#A8A2B3">Zero CORS · Só /api/*</text>
+    </g>
+
+    <g transform="translate(18, 238)">
+      <rect width="179" height="46" rx="10" fill="#251F31" stroke="#362E45" />
+      <text x="12" y="20" class="sans" font-size="12" font-weight="600" fill="#FFFFFF">Consultor IA + Voz</text>
+      <text x="12" y="36" class="sans" font-size="10.5" fill="#A8A2B3">Chat Markdown + Mic</text>
+    </g>
+
+    <g transform="translate(18, 304)">
+      <rect width="179" height="64" rx="10" fill="#FF6200" fill-opacity="0.1" stroke="#FF6200" stroke-opacity="0.35" />
+      <text x="12" y="21" class="sans" font-size="11" font-weight="700" fill="#FFA066">COOKIE ISOLADO</text>
+      <text x="12" y="39" class="mono" font-size="10.5" fill="#FFFFFF">portal_session_id</text>
+      <text x="12" y="54" class="sans" font-size="10" fill="#C9C3D4">HttpOnly · SameSite=Lax</text>
+    </g>
+  </g>
+
+  <!-- Arrow 1 -> 2 -->
+  <line x1="251" y1="345" x2="294" y2="345" stroke="#FF8A3D" stroke-width="2" marker-end="url(#arrowOrange)" />
+  <text x="272" y="334" text-anchor="middle" class="mono" font-size="9.5" fill="#FFA066">HTTPS</text>
+
+  <!-- Column 2: BFF Layer (Vercel) -->
+  <g transform="translate(302, 150)">
+    <rect width="268" height="390" rx="18" fill="#1C1726" stroke="#FF6200" stroke-opacity="0.55" stroke-width="1.8" />
+    <rect x="16" y="16" width="132" height="22" rx="11" fill="url(#orangeBadge)" />
+    <text x="82" y="31" text-anchor="middle" class="sans" font-size="10.5" font-weight="700" fill="#FFFFFF">VERCEL · BFF LAYER</text>
+
+    <text x="18" y="66" class="sans" font-size="17" font-weight="700" fill="#FFFFFF">Next.js App Router BFF</text>
+    <text x="18" y="86" class="mono" font-size="11" fill="#FFA066">src/app/api/** (Server-Side)</text>
+
+    <line x1="18" y1="104" x2="250" y2="104" stroke="#2D2638" />
+
+    <g transform="translate(18, 120)">
+      <rect width="232" height="62" rx="10" fill="#251F31" stroke="#3A314A" />
+      <text x="12" y="20" class="sans" font-size="12" font-weight="700" fill="#FFFFFF">Defesa na Borda</text>
+      <text x="12" y="37" class="sans" font-size="10.5" fill="#B8B2C4">CSP · HSTS · CSRF (Origin + Sec-Fetch)</text>
+      <text x="12" y="52" class="sans" font-size="10.5" fill="#B8B2C4">Rate Limit FIFO · Body Size Cap</text>
+    </g>
+
+    <g transform="translate(18, 194)">
+      <rect width="232" height="58" rx="10" fill="#251F31" stroke="#3A314A" />
+      <text x="12" y="20" class="sans" font-size="12" font-weight="700" fill="#FFFFFF">Anti-Adulteração &amp; Normalizer</text>
+      <text x="12" y="37" class="sans" font-size="10.5" fill="#B8B2C4">Recalcula preço/peso pelo catálogo</text>
+      <text x="12" y="51" class="sans" font-size="10.5" fill="#B8B2C4">Unifica erros EN/PT sem stack traces</text>
+    </g>
+
+    <g transform="translate(18, 264)">
+      <rect width="232" height="54" rx="10" fill="#251F31" stroke="#3A314A" />
+      <text x="12" y="20" class="sans" font-size="12" font-weight="700" fill="#FFFFFF">Orquestração Cross-Service</text>
+      <text x="12" y="38" class="mono" font-size="10" fill="#FFA066">/api/bff/checkout-with-budget</text>
+    </g>
+
+    <g transform="translate(18, 329)">
+      <rect width="232" height="44" rx="10" fill="#10B981" fill-opacity="0.12" stroke="#10B981" stroke-opacity="0.4" />
+      <text x="12" y="19" class="mono" font-size="10" font-weight="700" fill="#6EE7B7">X-Internal-Api-Key + X-Session-Id</text>
+      <text x="12" y="35" class="sans" font-size="10" fill="#B8EBD6">Injetados apenas server-side (nunca no browser)</text>
+    </g>
+  </g>
+
+  <!-- Arrows 2 -> 3 (split to Finance-AI and Checkout) -->
+  <path d="M 570 280 C 602 280, 602 248, 634 248" fill="none" stroke="#FF8A3D" stroke-width="2" marker-end="url(#arrowOrange)" />
+  <path d="M 570 415 C 602 415, 602 448, 634 448" fill="none" stroke="#FF8A3D" stroke-width="2" marker-end="url(#arrowOrange)" />
+  <text x="602" y="236" text-anchor="middle" class="mono" font-size="9.5" fill="#FFA066">:8080</text>
+  <text x="602" y="468" text-anchor="middle" class="mono" font-size="9.5" fill="#FFA066">:8081</text>
+
+  <!-- Column 3 Top: Finance-AI-Service -->
+  <g transform="translate(642, 150)">
+    <rect width="256" height="184" rx="18" fill="#1C1726" stroke="#322B40" stroke-width="1.5" />
+    <rect x="16" y="14" width="144" height="22" rx="11" fill="#A855F7" fill-opacity="0.18" />
+    <text x="88" y="29" text-anchor="middle" class="sans" font-size="10.5" font-weight="700" fill="#D8B4FE">RENDER · DOCKER JAVA 21</text>
+
+    <text x="18" y="60" class="sans" font-size="16" font-weight="700" fill="#FFFFFF">Finance-AI-Service</text>
+    <text x="18" y="78" class="sans" font-size="11.5" fill="#9E97AC">Spring Boot 3.4 · Spring AI 1.0</text>
+
+    <rect x="18" y="92" width="220" height="36" rx="8" fill="#251F31" />
+    <text x="28" y="109" class="sans" font-size="11" font-weight="600" fill="#E9D5FF">Tool Calling + Memória de Chat</text>
+    <text x="28" y="122" class="sans" font-size="10" fill="#A8A2B3">Groq (primário) + Gemini (fallback)</text>
+
+    <rect x="18" y="136" width="220" height="34" rx="8" fill="#251F31" />
+    <text x="28" y="157" class="mono" font-size="10" fill="#6EE7B7">ApiSecurityFilter · /health · Whisper</text>
+  </g>
+
+  <!-- Column 3 Bottom: CheckoutService -->
+  <g transform="translate(642, 356)">
+    <rect width="256" height="184" rx="18" fill="#1C1726" stroke="#322B40" stroke-width="1.5" />
+    <rect x="16" y="14" width="144" height="22" rx="11" fill="#F97316" fill-opacity="0.18" />
+    <text x="88" y="29" text-anchor="middle" class="sans" font-size="10.5" font-weight="700" fill="#FDBA74">RENDER · DOCKER JAVA 21</text>
+
+    <text x="18" y="60" class="sans" font-size="16" font-weight="700" fill="#FFFFFF">CheckoutService</text>
+    <text x="18" y="78" class="sans" font-size="11.5" fill="#9E97AC">Spring Boot 3.4 · Design Patterns GoF</text>
+
+    <rect x="18" y="92" width="220" height="36" rx="8" fill="#251F31" />
+    <text x="28" y="109" class="sans" font-size="11" font-weight="600" fill="#FED7AA">Facade · Strategy · Chain · Singleton</text>
+    <text x="28" y="122" class="sans" font-size="10" fill="#A8A2B3">Frete O(1) · Estoque · Cupom · Boleto</text>
+
+    <rect x="18" y="136" width="220" height="34" rx="8" fill="#251F31" />
+    <text x="28" y="157" class="mono" font-size="10" fill="#6EE7B7">Anti-IDOR · EntityGraph · /health</text>
+  </g>
+
+  <!-- Arrows 3 -> 4 -->
+  <path d="M 898 206 L 948 206" fill="none" stroke="#34D399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+  <path d="M 898 282 C 924 282, 924 328, 948 328" fill="none" stroke="#38BDF8" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowSky)" />
+  <path d="M 898 468 L 948 468" fill="none" stroke="#34D399" stroke-width="2" marker-end="url(#arrowEmerald)" />
+
+  <!-- Column 4: Neon DBs & AI Providers -->
+  <!-- DB 1 -->
+  <g transform="translate(956, 150)">
+    <rect width="208" height="114" rx="16" fill="#14231F" stroke="#10B981" stroke-opacity="0.45" stroke-width="1.5" />
+    <text x="16" y="28" class="sans" font-size="10.5" font-weight="700" fill="#34D399" letter-spacing="0.5">NEON POSTGRESQL #1</text>
+    <text x="16" y="53" class="mono" font-size="15" font-weight="700" fill="#FFFFFF">smartbudgetdb</text>
+    <text x="16" y="75" class="sans" font-size="11" fill="#A7F3D0">Tabela: transactions</text>
+    <text x="16" y="95" class="sans" font-size="10.5" fill="#6EE7B7">SSL · HikariCP · H2 em dev</text>
+  </g>
+
+  <!-- AI Providers -->
+  <g transform="translate(956, 282)">
+    <rect width="208" height="118" rx="16" fill="#152030" stroke="#38BDF8" stroke-opacity="0.45" stroke-width="1.5" />
+    <text x="16" y="28" class="sans" font-size="10.5" font-weight="700" fill="#38BDF8" letter-spacing="0.5">PROVEDORES DE IA</text>
+    <text x="16" y="53" class="sans" font-size="14" font-weight="700" fill="#FFFFFF">Groq LPU (Primário)</text>
+    <text x="16" y="71" class="mono" font-size="10" fill="#BAE6FD">gpt-oss-120b · Whisper STT</text>
+    <line x1="16" y1="82" x2="192" y2="82" stroke="#25364D" />
+    <text x="16" y="102" class="sans" font-size="11" fill="#93C5FD">Fallback: Gemini 3.8 Flash</text>
+  </g>
+
+  <!-- DB 2 -->
+  <g transform="translate(956, 426)">
+    <rect width="208" height="114" rx="16" fill="#14231F" stroke="#10B981" stroke-opacity="0.45" stroke-width="1.5" />
+    <text x="16" y="28" class="sans" font-size="10.5" font-weight="700" fill="#34D399" letter-spacing="0.5">NEON POSTGRESQL #2</text>
+    <text x="16" y="53" class="mono" font-size="15" font-weight="700" fill="#FFFFFF">checkoutdb</text>
+    <text x="16" y="75" class="sans" font-size="11" fill="#A7F3D0">pedidos · itens_pedido</text>
+    <text x="16" y="95" class="sans" font-size="10.5" fill="#6EE7B7">SSL · HikariCP · H2 em dev</text>
+  </g>
+
+  <!-- Footer bar -->
+  <rect x="36" y="562" width="1128" height="36" rx="10" fill="#1C1726" stroke="#2D2638" />
+  <text x="600" y="585" text-anchor="middle" class="sans" font-size="11.5" fill="#B8B2C4">
+    Fluxo seguro ponta a ponta: Browser → Cookie HttpOnly → Vercel BFF (X-Internal-Api-Key + X-Session-Id) → Render Docker (JVM 512MB) → Neon Postgres (Database per Service)
+  </text>
+</svg>

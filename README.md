@@ -1,156 +1,128 @@
-# Portal Unificado — Bootcamp Itaú + DIO (Frontend + BFF)
+<div align="center">
 
-> **Projeto de Portfólio • Bootcamp Java & IA — Itaú + DIO**  
-> Aplicação **Frontend + BFF (Backend for Frontend)** em **Next.js (App Router) + TypeScript + Tailwind CSS** que unifica dois microsserviços **Java 21 / Spring Boot 3.4** independentes em uma experiência coesa de **Super-App Financeiro (Loja GoF + Gestão Financeira com IA)**.
+# Portal Unificado — Bootcamp Itaú + DIO (Frontend & BFF)
 
-*(Projeto educacional e de portfólio desenvolvido durante o Bootcamp do Itaú em parceria com a DIO. Não é um produto oficial do Itaú Unibanco S.A.)*
+**Super-App financeiro em Next.js 15 + TypeScript que atua como camada BFF (Backend for Frontend) orquestrando dois microsserviços Java 21 / Spring Boot 3 independentes em produção.**
 
----
+[![Next.js 15](https://img.shields.io/badge/Next.js-15.5-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React 19](https://img.shields.io/badge/React-19-149ECA?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
-## Microsserviços Integrados
+<br />
 
-| Serviço | Repositório | Porta Local Padrão | Responsabilidade |
-| :--- | :--- | :---: | :--- |
-| **Smart Budget Spring AI** | [GabrielVSL/Smart-Budget-Spring-AI](https://github.com/GabrielVSL/Smart-Budget-Spring-AI) | `8080` | Controle financeiro pessoal, resumo consolidado, alerta de déficit e Consultor IA (Spring AI + Tool Calling + Whisper STT + OpenAI TTS) |
-| **Checkout API Design Patterns** | [GabrielVSL/Checkout-Api-Design-Patterns](https://github.com/GabrielVSL/Checkout-Api-Design-Patterns) | `8081` | Checkout de e-commerce aplicando Design Patterns GoF (Facade, Strategy, Chain of Responsibility, Singleton) e SOLID |
+<img src="./docs/portal-hero.png" alt="Tela principal do Portal Unificado — Bootcamp Itaú Java com IA" width="100%" />
 
----
+</div>
 
-## Arquitetura do Sistema (BFF + Database per Service)
-
-```mermaid
-flowchart TD
-    Browser["Navegador (UI Next.js React 19)"] --> BFF["Next.js App Router BFF (/api/*)"]
-    BFF -->|"BUDGET_API_URL (:8080)"| Budget["Smart Budget Spring AI\n(Java 21 + Spring Boot 3.4 + Spring AI)"]
-    BFF -->|"CHECKOUT_API_URL (:8081)"| Checkout["Checkout API Design Patterns\n(Java 21 + Spring Boot 3.4 + GoF)"]
-    Budget --> DB1[("Neon PostgreSQL #1\n(ou H2 local)")]
-    Checkout --> DB2[("Neon PostgreSQL #2\n(ou H2 local)")]
-    Budget -.->|"GPT / Whisper / TTS"| OpenAI["OpenAI API"]
-```
-
-### Diferenciais da Camada BFF (`src/app/api/**`)
-- **Zero CORS no navegador:** todas as chamadas passam por Route Handlers do Next.js (`/api/budget/*`, `/api/checkout/*`, `/api/bff/*`).
-- **Normalização de erros EN/PT (`src/lib/bff-proxy.ts`):**
-  - `Smart-Budget` retorna `{ timestamp, status, error, message, path, details }`.
-  - `Checkout-API` retorna `{ timestamp, status, erro, mensagem, path, detalhes }`.
-  - O BFF padroniza ambos para `{ status, title, message, details: string[], service: "budget" | "checkout" }`.
-- **Orquestração Cross-Service (`POST /api/bff/checkout-with-budget`):**
-  1. Dispara `POST /api/v1/checkout` na Checkout API.
-  2. Se retornar `201 Created` e o usuário marcou *"Lançar compra automaticamente no Smart Budget"*, dispara `POST /api/v1/transactions` no Smart Budget com a despesa consolidada.
-  3. **Falha parcial controlada:** se o pedido for aprovado mas o Smart Budget estiver offline, o pedido é preservado e o usuário recebe feedback transparente.
-- **Resiliência (HTTP `502` e Modo Demo):**
-  - Erro `502` no chat de IA (ex.: `OPENAI_API_KEY` ausente) exibe orientação amigável sem afetar o restante do portal.
-  - Se os backends estiverem desligados, um banner permite ativar o **Modo Demo Interativo** para testar UI, regras `422` do Lab GoF e lançamentos diretamente no navegador.
+> *Projeto educacional e de portfólio desenvolvido durante o Bootcamp Java & IA (Itaú + DIO). Não possui vínculo comercial nem representa produto oficial do Itaú Unibanco S.A.*
 
 ---
 
-## Telas e Funcionalidades
+## Ecossistema de Repositórios
 
-1. **Visão Geral (`/`)** — Hero institucional do Bootcamp Itaú + DIO, KPIs em tempo real (Saldo Líquido, Receitas, Despesas, Pedidos), alerta de `deficitAlert` e atividade recente dos dois serviços.
-2. **Loja & Checkout (`/shop`)** — Catálogo curado (incluindo `PROD-LIMITADO` com máx. 3 un. e `PROD-SEM-ESTOQUE` para testes reais), barra dinâmica de **Frete PAC Grátis (R$ 500)**, previsão de impacto no saldo do Smart Budget (com alerta se entrar em déficit), **Laboratório de Design Patterns (GoF)** colapsável para disparar cenários `422` reais, e histórico de pedidos com modal de detalhes por ID.
-3. **Finanças & Consultor IA (`/budget`)** — Cards de resumo, gráfico SVG responsivo de despesas por categoria, extrato com filtros (`category` e `type`), modal de novo lançamento e **Consultor Financeiro IA** com texto, sugestões clicáveis, gravação de voz (`MediaRecorder` → Whisper STT), toggle de resposta falada (OpenAI TTS com player `audioBase64`) e auto-refresh após *Tool Calling*.
-4. **Arquitetura & Bootcamp (`/architecture`)** — Vitrine técnica para recrutadores com topologia visual, decisões arquiteturais, monitor de saúde ao vivo (latência + status) e links diretos para GitHub e Swagger UI.
+Este portal conecta e unifica os dois microsserviços construídos ao longo do bootcamp em uma experiência única, mantendo separação estrita de domínios e bancos de dados:
+
+| Repositório | Stack Principal | Responsabilidade |
+| :--- | :--- | :--- |
+| **[ItauBootcamp](https://github.com/GabrielVSL/ItauBootcamp)** *(este repo)* | Next.js 15 · React 19 · TypeScript · Tailwind 4 | Interface do usuário + camada **BFF** (segurança de borda, sessão isolada, validação de catálogo, orquestração cross-service e gestão de cold start) |
+| **[CheckoutService](https://github.com/GabrielVSL/CheckoutService)** | Java 21 · Spring Boot 3.4 · JPA · PostgreSQL/H2 | Microsserviço de pedidos e checkout aplicando Design Patterns GoF (**Facade, Strategy, Chain of Responsibility, Singleton**) e SOLID |
+| **[Finance-AI-Service](https://github.com/GabrielVSL/Finance-AI-Service)** | Java 21 · Spring Boot 3.4 · Spring AI 1.0 · Groq/Gemini | Microsserviço de finanças pessoais + **Consultor Financeiro IA** multimodal (chat com memória, voz via Whisper STT e Tool Calling no banco) |
 
 ---
 
-## Como Rodar os 3 Repositórios Juntos Localmente
+## Arquitetura do Sistema
+
+<p align="center">
+  <img src="./docs/architecture.svg" alt="Diagrama de Arquitetura do Ecossistema BFF + Microsserviços + Neon PostgreSQL" width="100%" />
+</p>
+
+### Por que escolhi esta arquitetura?
+
+| Decisão Arquitetural | Motivação e Trade-off |
+| :--- | :--- |
+| **BFF (Backend for Frontend) com Next.js Route Handlers** | Em vez de expor URLs, segredos e regras dos microsserviços Java diretamente no navegador (o que exigiria CORS aberto e acoplaria o front a dois contratos diferentes), todas as chamadas passam por `/api/*` no servidor da Vercel. Isso permite esconder `INTERNAL_API_KEY`, normalizar contratos de erro em idiomas distintos (EN/PT) e impedir adulteração de preços antes mesmo do payload chegar ao Java. |
+| **Orquestração Cross-Service no BFF (`POST /api/bff/checkout-with-budget`)** | Manter `CheckoutService` e `Finance-AI-Service` desacoplados sem que um conheça a URL do outro. Quando o usuário finaliza uma compra com sincronização financeira ativa, o BFF confirma o pedido (`201 Created`) e, em seguida, lança a despesa no gestor financeiro com **tratamento explícito de falha parcial** (se o segundo serviço falhar, o pedido aprovado é preservado e o usuário é avisado com transparência). |
+| **Database per Service no Neon PostgreSQL** | Um único projeto gratuito no Neon hospeda dois bancos isolados (`checkoutdb` e `smartbudgetdb`). Cada microsserviço tem esquema, ciclo de vida e pool HikariCP independentes — além de fallback automático para H2 em memória no ambiente local e nos testes. |
+| **Isolamento de Visitantes via Cookie `HttpOnly` -> `X-Session-Id`** | Em um portal de portfólio aberto ao público sem fluxo obrigatório de cadastro, compartilhar uma tabela global vazaria nomes, e-mails e lançamentos entre visitantes. O BFF gera um UUID por navegador em cookie `HttpOnly; SameSite=Lax; Secure` e encaminha `X-Session-Id` server-side para ambos os backends, garantindo isolamento total e prevenção contra IDOR. |
+| **Renderização de Markdown 100% em React (`SafeMarkdown`)** | As respostas da IA trazem negrito, listas e tabelas de planejamento financeiro. Em vez de usar `dangerouslySetInnerHTML` (vetor clássico de XSS caso o LLM retorne HTML injetado), foi criado um parser enxuto em React JSX puro. |
+
+---
+
+## Desafios Reais Enfrentados e Como Foram Resolvidos
+
+1. **Cold Start em Infraestrutura Gratuita (Render Free 750h/mês)**
+   - **Problema:** Manter 2 serviços Java acordados 24/7 com pings externos consome `~1.440h/mês`, ultrapassando o limite de `750h/mês` do plano gratuito do Render (imposto pelos provedores para conter abuso e mineração). Deixá-los hibernar, porém, causava timeouts e falsa impressão de aplicação quebrada na primeira visita.
+   - **Solução:** O `AppStatusProvider` dispara um wake-up silencioso (`/api/health?wake=1`) **no instante em que o visitante abre a Landing Page (`/`)**, aproveitando o tempo de leitura inicial para subir os containers. Se o usuário entrar no portal antes do boot concluir, o `ServerWakeupGate` exibe status ao vivo por microsserviço, barra de progresso, explicação transparente da infraestrutura sob demanda e opção de navegar em **Modo Demo** enquanto os servidores terminam de iniciar (liberando a conexão real automaticamente quando prontos).
+
+2. **Adulteração de Preço e Peso pelo Navegador (*Price/Weight Tampering*)**
+   - **Problema:** Enviar `precoUnitario` e `pesoTotalKg` calculados no client permitiria alterar valores no DevTools antes do checkout.
+   - **Solução:** O BFF (`src/lib/validation.ts`) descarta qualquer preço, nome ou peso enviado pelo navegador e **recalcula tudo no servidor** a partir do catálogo oficial (`src/lib/catalog.ts`) antes de repassar ao `CheckoutService`.
+
+3. **Normalização de Contratos Heterogêneos (EN vs PT)**
+   - **Problema:** `Finance-AI-Service` responde erros em inglês (`error`, `message`, `details`) enquanto `CheckoutService` usa português (`erro`, `mensagem`, `detalhes`).
+   - **Solução:** `src/lib/bff-proxy.ts` normaliza qualquer erro upstream para um contrato único (`NormalizedApiError`), truncando mensagens longas, bloqueando stack traces em respostas `5xx` e protegendo o navegador contra respostas acima de `5 MB`.
+
+4. **UX do Consultor IA (Memória, Voz e Layout de Dropdowns)**
+   - **Problema:** Conversas se perdiam ao navegar entre abas; o dropdown de categoria dentro do modal de novo lançamento era cortado pelo `overflow-y-auto` do container; respostas com `**negrito**` e tabelas ficavam cruas e a leitura em voz alta lia asteriscos.
+   - **Solução:** Histórico persistido e sincronizado via `localStorage` + envio das últimas 8 mensagens como contexto para a IA; `CustomSelect` migrado para `createPortal(..., document.body)` com posicionamento dinâmico (`position: fixed` + auto-flip); e `SafeMarkdown` + `stripMarkdownForSpeech` para leitura limpa em voz alta (`pt-BR`).
+
+---
+
+## Camadas de Segurança Implementadas no BFF
+
+- **Headers HTTP defensivos (`next.config.ts`):** `Content-Security-Policy` restritiva, `Strict-Transport-Security` (HSTS), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy` e `Permissions-Policy` (microfone apenas `self`).
+- **Proteção CSRF (`src/lib/security.ts`):** validação de `Origin` vs `Host` + bloqueio de `Sec-Fetch-Site: cross-site` em todas as rotas de mutação (`POST`/`PUT`/`PATCH`/`DELETE`).
+- **Rate Limiting em memória com evicção FIFO:** buckets dedicados por IP (`ai-chat: 15/min`, `ai-voice: 8/min`, `write: 30/min`) com teto de memória anti-flood.
+- **Autenticação server-to-server (`X-Internal-Api-Key`):** enviada exclusivamente pelo BFF aos microsserviços no Render, impedindo acesso direto de terceiros às APIs de IA e Checkout.
+- **Upload de áudio validado na borda:** checagem antecipada de `Content-Length` (`<= 5 MB`), allowlist estrita de MIME types e substituição do nome original por `gravacao.<ext>`.
+
+---
+
+## Rotas do BFF (`src/app/api/**`)
+
+| Método | Rota BFF | Destino e Função |
+| :---: | :--- | :--- |
+| `GET` | `/api/health` | Sondagem leve (`GET /health`) dos dois microsserviços + suporte a `?wake=1` para ativação sob demanda |
+| `POST` | `/api/bff/checkout-with-budget` | Orquestração cross-service: valida catálogo, cria pedido no `CheckoutService` e sincroniza despesa no `Finance-AI-Service` |
+| `GET` / `POST` | `/api/budget/transactions` | Listagem filtrada e cadastro manual de receitas/despesas isolados por sessão |
+| `GET` | `/api/budget/transactions/summary` | Resumo consolidado (receitas, despesas, saldo líquido e `deficitAlert`) |
+| `POST` | `/api/budget/assistant/chat` | Chat com IA (texto + histórico recente para continuidade de planos financeiros) |
+| `POST` | `/api/budget/assistant/voice` | Upload multipart de áudio para transcrição Whisper STT + execução no agente IA |
+| `POST` | `/api/checkout` | Fechamento direto de pedido com recálculo server-side de preço/peso |
+| `GET` | `/api/checkout/pedidos` | Histórico de pedidos da sessão atual |
+| `GET` | `/api/checkout/pedidos/[id]` | Consulta detalhada de pedido por ID (escopo restrito à sessão) |
+
+---
+
+## Como Executar Localmente
 
 ### Pré-requisitos
-- **Java 21** e **Maven** (para os 2 microsserviços backend)
-- **Node.js 20+** e **npm** (para este portal Next.js)
-- *(Opcional)* Chave `OPENAI_API_KEY` para habilitar GPT, Whisper STT e OpenAI TTS no Smart Budget
+- **Node.js 20+** e **npm**
+- *(Opcional para modo real)* **Java 21** e **Maven 3.9+** rodando [Finance-AI-Service](https://github.com/GabrielVSL/Finance-AI-Service) na porta `8080` e [CheckoutService](https://github.com/GabrielVSL/CheckoutService) na porta `8081`
 
-### 1. Subir o Smart Budget Spring AI (porta `8080`)
-
+### Passo a passo
 ```bash
-git clone https://github.com/GabrielVSL/Smart-Budget-Spring-AI.git
-cd Smart-Budget-Spring-AI
-
-# Opcional: habilita o Consultor IA (sem ela, as rotas financeiras continuam funcionando normalmente)
-export OPENAI_API_KEY=sk-sua-chave-aqui   # PowerShell: $env:OPENAI_API_KEY="sk-sua-chave-aqui"
-
-mvn spring-boot:run
-```
-
-> O Smart Budget sobe por padrão em `http://localhost:8080` com banco H2 em memória.
-
-### 2. Subir a Checkout API Design Patterns (porta `8081`)
-
-Em outro terminal:
-
-```bash
-git clone https://github.com/GabrielVSL/Checkout-Api-Design-Patterns.git
-cd Checkout-Api-Design-Patterns
-
-# Sobe na porta 8081 para não colidir com o Smart Budget (8080)
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dserver.port=8081"
-```
-
-> Alternativa caso esteja rodando o JAR empacotado:
-> ```bash
-> mvn clean package -DskipTests
-> java -Dserver.port=8081 -jar target/*.jar
-> ```
-
-### 3. Subir este Portal Unificado (Frontend + BFF) na porta `3000`
-
-Em um terceiro terminal:
-
-```bash
+git clone https://github.com/GabrielVSL/ItauBootcamp.git
+cd ItauBootcamp
 cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Acesse **[http://localhost:3000](http://localhost:3000)** e verifique no cabeçalho os dois indicadores verdes: **Checkout: Online** e **Smart Budget: Online**.
+Acesse **`http://localhost:3000`**. Mesmo sem subir os backends Java, você pode explorar todas as telas, regras `422` e o consultor financeiro usando o **Modo Demo** integrado.
 
----
-
-## Variáveis de Ambiente
-
-Veja [`.env.example`](.env.example):
-
+### Variáveis de Ambiente (`.env.example`)
 ```env
 BUDGET_API_URL=http://localhost:8080
 CHECKOUT_API_URL=http://localhost:8081
-NEXT_PUBLIC_BUDGET_SWAGGER_URL=http://localhost:8080/swagger-ui/index.html
-NEXT_PUBLIC_CHECKOUT_SWAGGER_URL=http://localhost:8081/swagger-ui/index.html
+INTERNAL_API_KEY= # Em produção, use o mesmo segredo configurado nos 2 serviços do Render
 ```
 
----
-
-## Arquitetura em Produção com Neon PostgreSQL
-
-Em produção, recomenda-se seguir rigorosamente o padrão **Database per Service**:
-
-1. **Neon PostgreSQL — Banco #1 (`smart-budget-db`):** conectado exclusivamente ao serviço `Smart-Budget-Spring-AI` (ex.: Render, Railway ou Fly.io) via `SPRING_DATASOURCE_URL` (PostgreSQL SSL) + `OPENAI_API_KEY`.
-2. **Neon PostgreSQL — Banco #2 (`checkout-api-db`):** conectado exclusivamente ao serviço `Checkout-Api-Design-Patterns`, mantendo o isolamento total de esquema, escalabilidade e falhas.
-3. **Vercel (Este Repositório):** configure `BUDGET_API_URL` e `CHECKOUT_API_URL` apontando para as URLs HTTPS públicas de cada backend Java. Como o BFF executa server-side na Vercel, não há exposição de segredos nem necessidade de liberar CORS aberto nos microsserviços.
-
----
-
-## Rotas do BFF
-
-| Método | Rota BFF | Destino Backend |
-| :---: | :--- | :--- |
-| `GET` | `/api/health` | Probe de saúde + latência dos 2 microsserviços |
-| `POST` | `/api/bff/checkout-with-budget` | Orquestra `POST /api/v1/checkout` + `POST /api/v1/transactions` |
-| `GET` / `POST` | `/api/budget/transactions` | `Smart-Budget` → `/api/v1/transactions` |
-| `GET` | `/api/budget/transactions/summary` | `Smart-Budget` → `/api/v1/transactions/summary` |
-| `POST` | `/api/budget/assistant/chat` | `Smart-Budget` → `/api/v1/assistant/chat` |
-| `POST` | `/api/budget/assistant/voice` | `Smart-Budget` → `/api/v1/assistant/voice` |
-| `POST` | `/api/checkout` | `Checkout-API` → `/api/v1/checkout` |
-| `GET` | `/api/checkout/pedidos` | `Checkout-API` → `/api/v1/checkout/pedidos` |
-| `GET` | `/api/checkout/pedidos/[id]` | `Checkout-API` → `/api/v1/checkout/pedidos/{id}` |
-
----
-
-## Scripts Disponíveis
-
+### Scripts de Validação
 ```bash
-npm run dev        # Servidor de desenvolvimento (porta 3000)
-npm run build      # Build de produção Next.js
-npm run start      # Inicia o build de produção
-npm run typecheck  # Validação TypeScript (tsc --noEmit)
-npm run lint       # Validação ESLint
+npm run typecheck  # Verificação estrita TypeScript (tsc --noEmit)
+npm run lint       # ESLint / Next.js rules
+npm run build      # Build otimizado de produção
 ```
