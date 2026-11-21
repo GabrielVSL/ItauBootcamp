@@ -51,9 +51,15 @@ export interface FinancialSummaryResponse {
   transactionCount: number;
 }
 
+export interface ChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface ChatRequest {
   message: string;
   generateAudio: boolean;
+  history?: ChatHistoryItem[];
 }
 
 export interface AssistantResponse {

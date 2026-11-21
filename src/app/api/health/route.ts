@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { HealthResponse, ServiceHealth } from "@/types/bff";
 import {
   getBudgetApiUrl,
@@ -7,7 +7,8 @@ import {
   getPublicCheckoutSwaggerUrl,
 } from "@/lib/env";
 
-const HEALTH_CACHE_TTL_MS = 10_000;
+const ONLINE_CACHE_TTL_MS = 10_000;
+const WAKING_CACHE_TTL_MS = 2_000;
 let cachedHealth: { expiresAt: number; payload: HealthResponse } | null = null;
 
 async function probeService(
@@ -23,7 +24,7 @@ async function probeService(
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(7000),
     });
 
     const latencyMs = Date.now() - started;
@@ -52,14 +53,16 @@ async function probeService(
       status: "offline",
       latencyMs: null,
       swaggerUrl,
-      error: "Serviço indisponível",
+      error: "Inicializando instância sob demanda",
     };
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const now = Date.now();
-  if (cachedHealth && cachedHealth.expiresAt > now) {
+  const forceWake = request.nextUrl.searchParams.get("wake") === "1";
+
+  if (!forceWake && cachedHealth && cachedHealth.expiresAt > now) {
     return NextResponse.json(cachedHealth.payload, {
       status: 200,
       headers: { "Cache-Control": "no-store" },
@@ -89,8 +92,11 @@ export async function GET() {
     checkout,
   };
 
+  const bothOnline =
+    budget.status === "online" && checkout.status === "online";
+
   cachedHealth = {
-    expiresAt: now + HEALTH_CACHE_TTL_MS,
+    expiresAt: now + (bothOnline ? ONLINE_CACHE_TTL_MS : WAKING_CACHE_TTL_MS),
     payload,
   };
 

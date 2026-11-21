@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/Header";
 import { DemoBanner } from "@/components/layout/DemoBanner";
 import { Footer } from "@/components/layout/Footer";
 import { FloatingAiConsultant } from "@/components/layout/FloatingAiConsultant";
+import { ServerWakeupGate } from "@/components/layout/ServerWakeupGate";
 
 export default function AppShellLayout({
   children,
@@ -14,7 +15,7 @@ export default function AppShellLayout({
       <Header />
       <DemoBanner />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-8 sm:px-6 lg:px-8 lg:pb-16">
-        {children}
+        <ServerWakeupGate>{children}</ServerWakeupGate>
       </main>
       <Footer />
       <FloatingAiConsultant />

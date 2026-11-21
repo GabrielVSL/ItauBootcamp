@@ -179,11 +179,30 @@ export function validateChatRequest(
   const generateAudio =
     typeof raw.generateAudio === "boolean" ? raw.generateAudio : false;
 
+  const history: NonNullable<ChatRequest["history"]> = [];
+  if (Array.isArray(raw.history)) {
+    for (const entry of raw.history.slice(-8)) {
+      if (!isPlainObject(entry)) continue;
+      const role = entry.role === "user" || entry.role === "assistant"
+        ? entry.role
+        : null;
+      const content =
+        typeof entry.content === "string" ? entry.content.trim() : "";
+      if (role && content.length > 0) {
+        history.push({
+          role,
+          content: content.slice(0, 600),
+        });
+      }
+    }
+  }
+
   return {
     ok: true,
     data: {
       message,
       generateAudio,
+      ...(history.length > 0 ? { history } : {}),
     },
   };
 }

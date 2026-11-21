@@ -6,8 +6,13 @@ import { useAppStatus } from "@/context/AppStatusContext";
 import { AiConsultantPanel } from "@/components/budget/AiConsultantPanel";
 
 export function FloatingAiConsultant() {
-  const { aiConsultantOpen, openAiConsultant, closeAiConsultant } =
-    useAppStatus();
+  const {
+    aiConsultantOpen,
+    openAiConsultant,
+    closeAiConsultant,
+    allServicesOnline,
+    demoMode,
+  } = useAppStatus();
 
   useEffect(() => {
     if (!aiConsultantOpen) return undefined;
@@ -17,6 +22,10 @@ export function FloatingAiConsultant() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [aiConsultantOpen, closeAiConsultant]);
+
+  if (!allServicesOnline && !demoMode) {
+    return null;
+  }
 
   return (
     <>

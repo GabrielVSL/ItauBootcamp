@@ -7,19 +7,24 @@ import {
   Mic,
   Send,
   Square,
+  Trash2,
   Upload,
   User,
   Volume2,
   VolumeX,
   X,
 } from "lucide-react";
-import type { AssistantResponse } from "@/types/budget";
+import type { AssistantResponse, ChatHistoryItem } from "@/types/budget";
 import type { NormalizedApiError } from "@/types/bff";
 import { useAppStatus } from "@/context/AppStatusContext";
 import { useToast } from "@/context/ToastContext";
 import { simulateDemoAssistant } from "@/lib/demo-store";
 import { ApiErrorBanner } from "@/components/ui/ApiErrorBanner";
 import { PedraMark } from "@/components/brand/ItauBootcampLogo";
+import {
+  SafeMarkdown,
+  stripMarkdownForSpeech,
+} from "@/components/ui/SafeMarkdown";
 
 interface ChatMessage {
   id: string;
@@ -32,12 +37,62 @@ interface ChatMessage {
   viaVoice?: boolean;
 }
 
-const SUGGESTIONS = [
-  "Como está meu saldo?",
-  "Recebi salário de 5500 reais",
-  "Posso comprar um teclado de 350 reais?",
-  "Gastei 92 reais no supermercado",
-];
+const CHAT_STORAGE_KEY = "itau_ai_chat_history_v1";
+const CHAT_SYNC_EVENT = "itau:chat-history-updated";
+const MAX_STORED_MESSAGES = 60;
+
+function createWelcomeMessage(): ChatMessage {
+  return {
+    id: "welcome",
+    role: "assistant",
+    text: "Olá! Sou seu Consultor Financeiro IA. Você pode registrar receitas e despesas por texto ou voz, consultar seu saldo ou pedir um plano para metas como comprar uma casa, um carro ou montar sua reserva.",
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function loadStoredMessages(): ChatMessage[] {
+  if (typeof window === "undefined") return [createWelcomeMessage()];
+  try {
+    const raw = window.localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!raw) return [createWelcomeMessage()];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return [createWelcomeMessage()];
+    }
+    const valid = parsed.filter(
+      (item): item is ChatMessage =>
+        Boolean(item) &&
+        typeof item === "object" &&
+        typeof (item as ChatMessage).id === "string" &&
+        ((item as ChatMessage).role === "user" ||
+          (item as ChatMessage).role === "assistant") &&
+        typeof (item as ChatMessage).text === "string" &&
+        typeof (item as ChatMessage).timestamp === "string",
+    );
+    return valid.length > 0 ? valid.slice(-MAX_STORED_MESSAGES) : [createWelcomeMessage()];
+  } catch {
+    return [createWelcomeMessage()];
+  }
+}
+
+function saveStoredMessages(messages: ChatMessage[]) {
+  if (typeof window === "undefined") return;
+  try {
+    // Não persiste audioBase64 pesado no localStorage
+    const light = messages.slice(-MAX_STORED_MESSAGES).map((m) => ({
+      id: m.id,
+      role: m.role,
+      text: m.text,
+      transcribedText: m.transcribedText ?? null,
+      timestamp: m.timestamp,
+      viaVoice: Boolean(m.viaVoice),
+    }));
+    window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(light));
+    window.dispatchEvent(new Event(CHAT_SYNC_EVENT));
+  } catch {
+    // Ignora caso localStorage esteja indisponível ou cheio
+  }
+}
 
 interface AiConsultantPanelProps {
   onAssistantCompleted?: () => Promise<void> | void;
@@ -50,8 +105,10 @@ function speakWithBrowser(text: string): boolean {
     return false;
   }
   try {
+    const cleanText = stripMarkdownForSpeech(text);
+    if (!cleanText) return false;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = "pt-BR";
     utterance.rate = 1.03;
     window.speechSynthesis.speak(utterance);
@@ -84,14 +141,10 @@ export function AiConsultantPanel({
   const { demoMode, notifyBudgetUpdated } = useAppStatus();
   const { notify } = useToast();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      text: "Olá! Pergunte sobre seu saldo, registre um gasto por texto ou voz, ou simule uma compra.",
-      timestamp: new Date().toISOString(),
-    },
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    createWelcomeMessage(),
   ]);
+  const [hydrated, setHydrated] = useState(false);
   const [input, setInput] = useState("");
   const [generateAudio, setGenerateAudio] = useState(false);
   const [sending, setSending] = useState(false);
@@ -104,6 +157,22 @@ export function AiConsultantPanel({
   const timerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Carrega histórico salvo após hidratação e sincroniza entre painel flutuante e página /budget
+  useEffect(() => {
+    setMessages(loadStoredMessages());
+    setHydrated(true);
+
+    const handleSync = () => {
+      setMessages(loadStoredMessages());
+    };
+    window.addEventListener(CHAT_SYNC_EVENT, handleSync);
+    window.addEventListener("storage", handleSync);
+    return () => {
+      window.removeEventListener(CHAT_SYNC_EVENT, handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
+  }, []);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,13 +190,43 @@ export function AiConsultantPanel({
     };
   }, []);
 
+  function updateMessages(updater: (prev: ChatMessage[]) => ChatMessage[]) {
+    setMessages((prev) => {
+      const next = updater(prev).slice(-MAX_STORED_MESSAGES);
+      if (hydrated) {
+        saveStoredMessages(next);
+      }
+      return next;
+    });
+  }
+
+  function handleClearHistory() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    const fresh = [createWelcomeMessage()];
+    setMessages(fresh);
+    saveStoredMessages(fresh);
+    setChatError(null);
+  }
+
+  function buildRecentHistory(currentMessages: ChatMessage[]): ChatHistoryItem[] {
+    return currentMessages
+      .filter((m) => m.id !== "welcome")
+      .slice(-8)
+      .map((m) => ({
+        role: m.role,
+        content: m.text.slice(0, 600),
+      }));
+  }
+
   function appendAssistantReply(reply: AssistantResponse, idPrefix: string) {
     let spokenViaBrowser = false;
     if (generateAudio && !reply.audioBase64) {
       spokenViaBrowser = speakWithBrowser(reply.response);
     }
 
-    setMessages((prev) => [
+    updateMessages((prev) => [
       ...prev,
       {
         id: `${idPrefix}-${Date.now()}`,
@@ -144,10 +243,11 @@ export function AiConsultantPanel({
     const trimmed = textToSend.trim();
     if (!trimmed || sending) return;
 
+    const historySnapshot = buildRecentHistory(messages);
     setChatError(null);
     setInput("");
 
-    setMessages((prev) => [
+    updateMessages((prev) => [
       ...prev,
       {
         id: `user-${Date.now()}`,
@@ -171,6 +271,7 @@ export function AiConsultantPanel({
           body: JSON.stringify({
             message: trimmed,
             generateAudio,
+            history: historySnapshot,
           }),
         });
         const data = await res.json();
@@ -206,7 +307,7 @@ export function AiConsultantPanel({
   async function sendVoiceBlob(blob: Blob, filename: string) {
     setChatError(null);
     const placeholderId = `voice-user-${Date.now()}`;
-    setMessages((prev) => [
+    updateMessages((prev) => [
       ...prev,
       {
         id: placeholderId,
@@ -253,7 +354,7 @@ export function AiConsultantPanel({
       }
 
       if (reply.transcribedText) {
-        setMessages((prev) =>
+        updateMessages((prev) =>
           prev.map((m) =>
             m.id === placeholderId
               ? {
@@ -353,6 +454,8 @@ export function AiConsultantPanel({
     e.target.value = "";
   }
 
+  const hasConversation = messages.some((m) => m.id !== "welcome");
+
   return (
     <section
       className={`flex flex-col overflow-hidden rounded-[24px] border border-[#EAE9E4] bg-white ${
@@ -363,14 +466,14 @@ export function AiConsultantPanel({
       <div className="relative overflow-hidden bg-[#120F17] px-5 py-4 text-white">
         <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#FF6200]/25 blur-2xl" />
         <div className="relative flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
             <PedraMark className="h-9 w-9 shrink-0" />
             <div className="min-w-0">
               <h2 className="truncate text-[14.5px] font-semibold tracking-[-0.015em]">
                 Consultor IA
               </h2>
               <p className="truncate text-[11px] text-white/55">
-                Texto, microfone ou áudio
+                Lançamentos, saldo e planos por texto ou voz
               </p>
             </div>
           </div>
@@ -378,7 +481,19 @@ export function AiConsultantPanel({
           <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setGenerateAudio((prev) => !prev)}
+              onClick={() => {
+                setGenerateAudio((prev) => {
+                  if (prev && typeof window !== "undefined" && "speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                  }
+                  return !prev;
+                });
+              }}
+              title={
+                generateAudio
+                  ? "Leitura em voz alta ativada: clique para silenciar as respostas da IA"
+                  : "Ativar leitura em voz alta: a IA lerá as respostas automaticamente"
+              }
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition ${
                 generateAudio
                   ? "border-[#FF8A3D] bg-[#FF6200] text-white"
@@ -390,8 +505,21 @@ export function AiConsultantPanel({
               ) : (
                 <VolumeX className="h-3.5 w-3.5" />
               )}
-              Voz {generateAudio ? "ativa" : "off"}
+              {generateAudio ? "Leitura: ON" : "Leitura: OFF"}
             </button>
+
+            {hasConversation && (
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                disabled={sending}
+                title="Limpar histórico desta conversa"
+                aria-label="Limpar histórico da conversa"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/75 transition hover:bg-white/20 hover:text-white disabled:opacity-40"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
 
             {onClose && (
               <button
@@ -405,21 +533,6 @@ export function AiConsultantPanel({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Sugestões clicáveis */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-[#F0EFEA] bg-[#FAF9F7] px-4 py-2.5">
-        {SUGGESTIONS.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            disabled={sending}
-            onClick={() => void sendTextMessage(prompt)}
-            className="rounded-full border border-[#E6E4DE] bg-white px-3 py-1 text-[11px] font-medium text-[#45433E] transition hover:border-[#141413] hover:text-[#141413] disabled:opacity-50"
-          >
-            {prompt}
-          </button>
-        ))}
       </div>
 
       {/* Área de mensagens */}
@@ -457,10 +570,15 @@ export function AiConsultantPanel({
                 {msg.viaVoice && (
                   <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-orange-200">
                     <Mic className="h-2.5 w-2.5" />
-                    Whisper STT
+                    Mensagem por voz
                   </span>
                 )}
-                <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                {isUser ? (
+                  <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                ) : (
+                  <SafeMarkdown content={msg.text} />
+                )}
 
                 {msg.audioBase64 &&
                   (() => {
@@ -480,7 +598,7 @@ export function AiConsultantPanel({
                   <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#FFF4EC] px-2.5 py-1.5 text-[10px] font-semibold text-[#C84A00]">
                     <span className="inline-flex items-center gap-1">
                       <Volume2 className="h-3 w-3" />
-                      Lido via Voz do Navegador (grátis)
+                      Lido em voz alta
                     </span>
                     <button
                       type="button"
@@ -513,7 +631,7 @@ export function AiConsultantPanel({
               <Loader2 className="h-4 w-4 animate-spin text-[#FF6200]" />
             </div>
             <span className="rounded-2xl border border-[#EAE3DB] bg-white px-4 py-2.5 shadow-2xs">
-              Consultor IA processando (Tool Calling)...
+              Consultor IA analisando suas finanças...
             </span>
           </div>
         )}
@@ -600,7 +718,7 @@ export function AiConsultantPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={sending || recording}
-            placeholder="Pergunte sobre seu saldo ou lance despesas..."
+            placeholder="Ex: Quero juntar para uma casa, monte um plano..."
             className="h-10 flex-1 rounded-full border border-[#EAE3DB] bg-[#FBF9F6] px-4 text-xs text-[#101828] outline-none focus:border-[#FF6200] focus:bg-white focus:ring-2 focus:ring-[#FF6200]/15 disabled:opacity-60"
           />
 

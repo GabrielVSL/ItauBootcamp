@@ -27,6 +27,7 @@ export function Header() {
     isBudgetOnline,
     isCheckoutOnline,
     isChecking,
+    isWakingUp,
     refreshHealth,
     demoMode,
     hideBalances,
@@ -34,6 +35,13 @@ export function Header() {
   } = useAppStatus();
 
   const bothOnline = isBudgetOnline && isCheckoutOnline && !demoMode;
+  const statusLabel = bothOnline
+    ? "APIs Online"
+    : demoMode
+      ? "Demo"
+      : isWakingUp
+        ? "Iniciando..."
+        : "Offline";
 
   return (
     <>
@@ -117,10 +125,14 @@ export function Header() {
             >
               <span
                 className={`h-2 w-2 rounded-full ${
-                  bothOnline ? "bg-emerald-500" : "bg-[#FF6200]"
+                  bothOnline
+                    ? "bg-emerald-500"
+                    : isWakingUp && !demoMode
+                      ? "animate-pulse bg-[#FF6200]"
+                      : "bg-[#FF6200]"
                 }`}
               />
-              <span>{bothOnline ? "APIs Online" : demoMode ? "Demo" : "Offline"}</span>
+              <span>{statusLabel}</span>
               <RefreshCw
                 className={`h-3 w-3 opacity-60 ${isChecking ? "animate-spin" : ""}`}
               />
