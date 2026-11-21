@@ -96,33 +96,9 @@ Este portal conecta e unifica os dois microsserviços construídos ao longo do b
 
 ---
 
-## Como Executar Localmente
+## Infraestrutura em Produção
 
-### Pré-requisitos
-- **Node.js 20+** e **npm**
-- *(Opcional para modo real)* **Java 21** e **Maven 3.9+** rodando [Finance-AI-Service](https://github.com/GabrielVSL/Finance-AI-Service) na porta `8080` e [CheckoutService](https://github.com/GabrielVSL/CheckoutService) na porta `8081`
+- **Frontend + BFF:** hospedado na **Vercel** (Next.js App Router server-side), sem exposição de segredos ao navegador.
+- **Microsserviços Java 21:** containers Docker multi-stage não-root rodando no **Render** com ativação sob demanda já disparada na Landing Page.
+- **Banco de Dados:** **Neon PostgreSQL** seguindo *Database per Service* (`smartbudgetdb` e `checkoutdb` isolados via SSL).
 
-### Passo a passo
-```bash
-git clone https://github.com/GabrielVSL/ItauBootcamp.git
-cd ItauBootcamp
-cp .env.example .env.local
-npm install
-npm run dev
-```
-
-Acesse **`http://localhost:3000`**. Mesmo sem subir os backends Java, você pode explorar todas as telas, regras `422` e o consultor financeiro usando o **Modo Demo** integrado.
-
-### Variáveis de Ambiente (`.env.example`)
-```env
-BUDGET_API_URL=http://localhost:8080
-CHECKOUT_API_URL=http://localhost:8081
-INTERNAL_API_KEY= # Em produção, use o mesmo segredo configurado nos 2 serviços do Render
-```
-
-### Scripts de Validação
-```bash
-npm run typecheck  # Verificação estrita TypeScript (tsc --noEmit)
-npm run lint       # ESLint / Next.js rules
-npm run build      # Build otimizado de produção
-```
