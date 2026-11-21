@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface ItauBootcampLogoProps {
   size?: "sm" | "md" | "lg";
@@ -7,65 +8,23 @@ interface ItauBootcampLogoProps {
 }
 
 /**
- * Símbolo "Pedra" (superelipse orgânica inspirada no rebranding de 100 anos do Itaú)
- * criado especialmente para o projeto de portfólio do Bootcamp Itaú + DIO.
+ * Símbolo oficial do Itaú (public/images/itau-logo.png) reutilizado
+ * no cabeçalho, rodapé e cards do portal.
  */
 export function PedraMark({
   className = "h-10 w-10",
-  inverted = false,
 }: {
   className?: string;
   inverted?: boolean;
 }) {
   return (
-    <svg
-      viewBox="0 0 64 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      {/* Superelipse orgânica ("A Pedra") */}
-      <path
-        d="M32 3C50.8 3 61 11.4 61 32C61 52.6 50.8 61 32 61C13.2 61 3 52.6 3 32C3 11.4 13.2 3 32 3Z"
-        fill={inverted ? "#FFFFFF" : "url(#itauPedraGrad)"}
-      />
-      <defs>
-        <linearGradient
-          id="itauPedraGrad"
-          x1="8"
-          y1="6"
-          x2="58"
-          y2="60"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#FF7214" />
-          <stop offset="0.55" stopColor="#FF6200" />
-          <stop offset="1" stopColor="#EC5200" />
-        </linearGradient>
-      </defs>
-      {/* Tipografia geométrica humanista dentro da pedra */}
-      <text
-        x="32"
-        y="40"
-        textAnchor="middle"
-        fill={inverted ? "#FF6200" : "#FFFFFF"}
-        fontFamily="var(--font-jakarta), system-ui, sans-serif"
-        fontWeight="800"
-        fontSize="21"
-        letterSpacing="-0.8"
-      >
-        itaú
-      </text>
-      {/* Pequeno ponto/acento editorial no canto inferior */}
-      <circle
-        cx="49"
-        cy="17"
-        r="3"
-        fill={inverted ? "#001E62" : "#FFF3E8"}
-        fillOpacity="0.9"
-      />
-    </svg>
+    <Image
+      src="/images/itau-logo.png"
+      alt="Logo Itaú"
+      width={80}
+      height={80}
+      className={`${className} object-contain`}
+    />
   );
 }
 

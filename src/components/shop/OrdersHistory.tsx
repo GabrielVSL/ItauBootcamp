@@ -71,11 +71,10 @@ export function OrdersHistory({ orders, loading }: OrdersHistoryProps) {
           </div>
           <div>
             <h2 className="font-display text-base font-extrabold text-[#101828]">
-              Histórico de Pedidos Confirmados
+              Histórico de Pedidos
             </h2>
             <p className="text-xs text-[#667085]">
-              GET /api/v1/checkout/pedidos • Clique em Abrir para detalhes por
-              ID
+              Acompanhe seus pedidos e clique em Abrir para ver os detalhes
             </p>
           </div>
         </div>
@@ -181,12 +180,12 @@ export function OrdersHistory({ orders, loading }: OrdersHistoryProps) {
             ? `Detalhes do Pedido #${selectedOrder.pedidoId}`
             : "Detalhes do Pedido"
         }
-        subtitle="Consulta direta ao endpoint GET /api/v1/checkout/pedidos/{id}"
+        subtitle="Resumo completo dos itens, frete e pagamento"
       >
         {loadingDetail ? (
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-[#667085]">
             <Loader2 className="h-5 w-5 animate-spin text-[#FF6200]" />
-            Buscando pedido na Checkout API...
+            Carregando detalhes do pedido...
           </div>
         ) : detailError ? (
           <ApiErrorBanner error={detailError} />
@@ -212,7 +211,7 @@ export function OrdersHistory({ orders, loading }: OrdersHistoryProps) {
                 </span>
               </div>
               <div>
-                <span className="block text-[#667085]">Frete (Strategy)</span>
+                <span className="block text-[#667085]">Frete</span>
                 <strong className="text-[#101828]">
                   {selectedOrder.modalidadeFrete}
                 </strong>

@@ -1,5 +1,5 @@
 import type { TransactionCategory } from "@/types/budget";
-import type { CheckoutItemRequest, CheckoutRequest } from "@/types/checkout";
+import type { CheckoutItemRequest } from "@/types/checkout";
 
 export interface CatalogProduct {
   produtoId: string;
@@ -56,17 +56,16 @@ export const CATALOG_PRODUCTS: CatalogProduct[] = [
   },
   {
     produtoId: "PROD-LIMITADO",
-    nomeProduto: "Kit Dev Itaú Bootcamp Edition (Hub + Mochila)",
+    nomeProduto: "Kit Dev Edition (Hub USB-C + Mochila)",
     descricao:
-      "Produto configurado no backend com limite real de 3 unidades para testar a Chain of Responsibility.",
+      "Hub USB-C 7 em 1 de alumínio e mochila impermeável para notebook até 16\".",
     precoUnitario: 229.9,
     pesoKg: 1.2,
     budgetCategory: "TECH",
-    tag: "Edição Limitada",
+    tag: "Acessórios",
     stockBadge: {
-      label: "Últimas 3 unidades",
+      label: "Últimas 3 un.",
       tone: "limited",
-      hint: "PROD-LIMITADO: pedir > 3 unidades retorna 422 no Elo 1 (Estoque).",
     },
     accentColor: "from-[#EC7000] to-[#C85A00]",
   },
@@ -74,7 +73,7 @@ export const CATALOG_PRODUCTS: CatalogProduct[] = [
     produtoId: "PROD-NOTEBOOK-DEV",
     nomeProduto: "Workstation Ultrabook 32GB RAM",
     descricao:
-      "Alta performance para containers Docker, Spring Boot e modelos locais. Ideal para testar limite de Boleto (> R$ 5.000).",
+      "Alta performance para desenvolvimento, multitarefa pesada e jornadas longas fora da tomada.",
     precoUnitario: 5499.0,
     pesoKg: 1.8,
     budgetCategory: "TECH",
@@ -110,15 +109,14 @@ export const CATALOG_PRODUCTS: CatalogProduct[] = [
     produtoId: "PROD-SEM-ESTOQUE",
     nomeProduto: "Monitor Ultrawide 34\" 144Hz OLED",
     descricao:
-      "Item propositalmente mantido com estoque zero no backend para demonstração real de erro 422 (Chain Elo 1).",
+      "Painel curvo OLED 144Hz com fidelidade de cores para produtividade e edição.",
     precoUnitario: 3299.0,
     pesoKg: 7.4,
     budgetCategory: "TECH",
-    tag: "Demo GoF (422)",
+    tag: "Monitores",
     stockBadge: {
-      label: "Esgotado (Demo 422)",
+      label: "Esgotado",
       tone: "out",
-      hint: "PROD-SEM-ESTOQUE: enviar no checkout dispara 422 no Elo 1 (Estoque).",
     },
     accentColor: "from-rose-600 to-red-700",
   },
@@ -166,19 +164,19 @@ export function estimateCheckoutPricing(
   if (code === "DEV10") {
     valorDesconto = round2(valorItens * 0.1);
     cupomStatus = "applied";
-    cupomHint = "DEV10 aplicado: 10% OFF sem valor mínimo.";
+    cupomHint = "Cupom DEV10 aplicado (10% OFF).";
   } else if (code === "BEMVINDO20") {
     if (valorItens >= 100) {
       valorDesconto = round2(valorItens * 0.2);
       cupomStatus = "applied";
-      cupomHint = "BEMVINDO20 aplicado: 20% OFF (mínimo R$ 100 atingido).";
+      cupomHint = "Cupom BEMVINDO20 aplicado (20% OFF).";
     } else {
       cupomStatus = "min_not_met";
-      cupomHint = "BEMVINDO20 exige mínimo de R$ 100,00 em itens (retornará 422).";
+      cupomHint = "BEMVINDO20 exige mínimo de R$ 100,00 em itens.";
     }
   } else if (code.length > 0) {
     cupomStatus = "unknown";
-    cupomHint = `Cupom "${code}" não reconhecido (Chain Elo 3 retornará 422).`;
+    cupomHint = `Cupom "${code}" não encontrado.`;
   }
 
   const valorTotal = round2(Math.max(0, valorItens + valorFrete - valorDesconto));
@@ -198,135 +196,3 @@ export function estimateCheckoutPricing(
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
-
-export interface DesignPatternScenario {
-  id: string;
-  title: string;
-  pattern: string;
-  expectedStatus: number;
-  description: string;
-  payload: CheckoutRequest;
-}
-
-export const DESIGN_PATTERN_SCENARIOS: DesignPatternScenario[] = [
-  {
-    id: "strategy-drone",
-    title: 'Frete Inválido ("DRONE")',
-    pattern: "Strategy + Factory (Frete)",
-    expectedStatus: 422,
-    description:
-      'Envia modalidadeFrete: "DRONE", não registrada no mapa de estratégias (PAC/SEDEX).',
-    payload: {
-      clienteNome: "Avaliador Itaú",
-      clienteEmail: "avaliador@itau-bootcamp.dev",
-      itens: [
-        {
-          produtoId: "PROD-KEYCHRON-K2",
-          nomeProduto: "Teclado Mecânico Wireless Pro",
-          quantidade: 1,
-          precoUnitario: 349.9,
-        },
-      ],
-      modalidadeFrete: "DRONE",
-      formaPagamento: "PIX",
-      cupomDesconto: null,
-      pesoTotalKg: 0.9,
-    },
-  },
-  {
-    id: "chain-estoque-esgotado",
-    title: "Estoque Esgotado (PROD-SEM-ESTOQUE)",
-    pattern: "Chain of Responsibility — Elo 1 (Estoque)",
-    expectedStatus: 422,
-    description:
-      "Validador de estoque bloqueia imediatamente o item com 0 unidades disponíveis.",
-    payload: {
-      clienteNome: "Avaliador Itaú",
-      clienteEmail: "avaliador@itau-bootcamp.dev",
-      itens: [
-        {
-          produtoId: "PROD-SEM-ESTOQUE",
-          nomeProduto: 'Monitor Ultrawide 34" 144Hz OLED',
-          quantidade: 1,
-          precoUnitario: 3299.0,
-        },
-      ],
-      modalidadeFrete: "PAC",
-      formaPagamento: "PIX",
-      cupomDesconto: null,
-      pesoTotalKg: 7.4,
-    },
-  },
-  {
-    id: "chain-estoque-limitado",
-    title: "Exceder Limite (5x PROD-LIMITADO)",
-    pattern: "Chain of Responsibility — Elo 1 (Estoque)",
-    expectedStatus: 422,
-    description:
-      "PROD-LIMITADO possui no máximo 3 unidades; solicitar 5 interrompe a cadeia no Elo 1.",
-    payload: {
-      clienteNome: "Avaliador Itaú",
-      clienteEmail: "avaliador@itau-bootcamp.dev",
-      itens: [
-        {
-          produtoId: "PROD-LIMITADO",
-          nomeProduto: "Kit Dev Itaú Bootcamp Edition",
-          quantidade: 5,
-          precoUnitario: 229.9,
-        },
-      ],
-      modalidadeFrete: "SEDEX",
-      formaPagamento: "CARTAO_CREDITO",
-      cupomDesconto: null,
-      pesoTotalKg: 6.0,
-    },
-  },
-  {
-    id: "chain-boleto-limite",
-    title: "Boleto acima de R$ 5.000",
-    pattern: "Chain of Responsibility — Elo 2 (Pagamento)",
-    expectedStatus: 422,
-    description:
-      "Pedido de R$ 5.499,00 com formaPagamento BOLETO viola a regra de teto de R$ 5.000,00.",
-    payload: {
-      clienteNome: "Avaliador Itaú",
-      clienteEmail: "avaliador@itau-bootcamp.dev",
-      itens: [
-        {
-          produtoId: "PROD-NOTEBOOK-DEV",
-          nomeProduto: "Workstation Ultrabook 32GB RAM",
-          quantidade: 1,
-          precoUnitario: 5499.0,
-        },
-      ],
-      modalidadeFrete: "PAC",
-      formaPagamento: "BOLETO",
-      cupomDesconto: null,
-      pesoTotalKg: 1.8,
-    },
-  },
-  {
-    id: "chain-cupom-invalido",
-    title: 'Cupom Inválido ("SUPER99")',
-    pattern: "Chain of Responsibility — Elo 3 (Cupom)",
-    expectedStatus: 422,
-    description:
-      'Cupom "SUPER99" é rejeitado no terceiro elo após passar por estoque e pagamento.',
-    payload: {
-      clienteNome: "Avaliador Itaú",
-      clienteEmail: "avaliador@itau-bootcamp.dev",
-      itens: [
-        {
-          produtoId: "PROD-MOUSE-MX",
-          nomeProduto: "Mouse Ergonômico Precision",
-          quantidade: 1,
-          precoUnitario: 279.0,
-        },
-      ],
-      modalidadeFrete: "PAC",
-      formaPagamento: "PIX",
-      cupomDesconto: "SUPER99",
-      pesoTotalKg: 0.25,
-    },
-  },
-];

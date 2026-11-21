@@ -2,17 +2,20 @@ import { NextResponse } from "next/server";
 import type { HealthResponse, ServiceHealth } from "@/types/bff";
 import {
   getBudgetApiUrl,
-  getBudgetSwaggerUrl,
   getCheckoutApiUrl,
-  getCheckoutSwaggerUrl,
+  getPublicBudgetSwaggerUrl,
+  getPublicCheckoutSwaggerUrl,
 } from "@/lib/env";
+
+const HEALTH_CACHE_TTL_MS = 10_000;
+let cachedHealth: { expiresAt: number; payload: HealthResponse } | null = null;
 
 async function probeService(
   service: "budget" | "checkout",
   name: string,
   baseUrl: string,
   probePath: string,
-  swaggerUrl: string,
+  swaggerUrl: string | null,
 ): Promise<ServiceHealth> {
   const started = Date.now();
   try {
@@ -20,17 +23,16 @@ async function probeService(
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(2500),
+      signal: AbortSignal.timeout(5000),
     });
 
     const latencyMs = Date.now() - started;
-    if (res.ok || res.status === 404 || res.status === 400) {
+    if (res.ok) {
       return {
         service,
         name,
         status: "online",
         latencyMs,
-        url: baseUrl,
         swaggerUrl,
       };
     }
@@ -40,38 +42,44 @@ async function probeService(
       name,
       status: "offline",
       latencyMs,
-      url: baseUrl,
       swaggerUrl,
       error: `HTTP ${res.status}`,
     };
-  } catch (err) {
+  } catch {
     return {
       service,
       name,
       status: "offline",
       latencyMs: null,
-      url: baseUrl,
       swaggerUrl,
-      error: err instanceof Error ? err.message : "Conexão recusada",
+      error: "Serviço indisponível",
     };
   }
 }
 
 export async function GET() {
+  const now = Date.now();
+  if (cachedHealth && cachedHealth.expiresAt > now) {
+    return NextResponse.json(cachedHealth.payload, {
+      status: 200,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
   const [budget, checkout] = await Promise.all([
     probeService(
       "budget",
       "Smart Budget Spring AI",
       getBudgetApiUrl(),
-      "/api/v1/transactions/summary",
-      getBudgetSwaggerUrl(),
+      "/health",
+      getPublicBudgetSwaggerUrl(),
     ),
     probeService(
       "checkout",
       "Checkout API Design Patterns",
       getCheckoutApiUrl(),
-      "/api/v1/checkout/pedidos",
-      getCheckoutSwaggerUrl(),
+      "/health",
+      getPublicCheckoutSwaggerUrl(),
     ),
   ]);
 
@@ -81,5 +89,13 @@ export async function GET() {
     checkout,
   };
 
-  return NextResponse.json(payload, { status: 200 });
+  cachedHealth = {
+    expiresAt: now + HEALTH_CACHE_TTL_MS,
+    payload,
+  };
+
+  return NextResponse.json(payload, {
+    status: 200,
+    headers: { "Cache-Control": "no-store" },
+  });
 }

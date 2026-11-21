@@ -9,7 +9,6 @@ export interface NormalizedApiError {
   message: string;
   details: string[];
   service: BackendServiceName;
-  raw?: unknown;
 }
 
 export interface ServiceHealth {
@@ -17,8 +16,7 @@ export interface ServiceHealth {
   name: string;
   status: "online" | "offline";
   latencyMs: number | null;
-  url: string;
-  swaggerUrl: string;
+  swaggerUrl: string | null;
   error?: string;
 }
 

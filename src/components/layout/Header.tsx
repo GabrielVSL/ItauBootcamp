@@ -1,51 +1,25 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Cpu,
+  ArrowLeft,
   Eye,
   EyeOff,
   Home,
   RefreshCw,
   ShoppingBag,
-  Sparkles,
   Wallet,
 } from "lucide-react";
 import { useAppStatus } from "@/context/AppStatusContext";
-import { ItauBootcampLogo } from "@/components/brand/ItauBootcampLogo";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Início", icon: Home },
-  { href: "/shop", label: "Shop GoF", icon: ShoppingBag },
-  { href: "/budget", label: "Finanças & IA", icon: Wallet },
-  { href: "/architecture", label: "Arquitetura", icon: Cpu },
+  { href: "/app", label: "Início", icon: Home },
+  { href: "/shop", label: "Loja", icon: ShoppingBag },
+  { href: "/budget", label: "Finanças", icon: Wallet },
 ];
-
-function ServiceDot({
-  label,
-  online,
-  demoMode,
-}: {
-  label: string;
-  online: boolean;
-  demoMode: boolean;
-}) {
-  const dot = online
-    ? "bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]"
-    : "bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.18)]";
-
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#525D73]"
-      title={`${label}: ${online ? "Online" : demoMode ? "Modo Demo" : "Offline"}`}
-    >
-      <span className={`h-2 w-2 rounded-full ${dot}`} />
-      <span>{label}</span>
-    </span>
-  );
-}
 
 export function Header() {
   const pathname = usePathname();
@@ -59,22 +33,49 @@ export function Header() {
     toggleHideBalances,
   } = useAppStatus();
 
+  const bothOnline = isBudgetOnline && isCheckoutOnline && !demoMode;
+
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-[#EAE3DB]/90 bg-[#FBF9F6]/85 backdrop-blur-xl">
-        {/* Linha fina de assinatura laranja Itaú */}
-        <div className="h-1 w-full bg-gradient-to-r from-[#FF6200] via-[#FF7A1A] to-[#001E62]" />
+      <header className="sticky top-0 z-40 border-b border-[#EAE9E4] bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          {/* Esquerda: Logo Itaú + nome + botão claro para voltar à apresentação */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/app"
+              className="group flex items-center gap-2.5 focus:outline-none"
+            >
+              <Image
+                src="/images/itau-logo.png"
+                alt="Logo Itaú"
+                width={30}
+                height={30}
+                priority
+                className="h-[30px] w-[30px] object-contain transition-transform duration-200 group-hover:scale-105"
+              />
+              <span className="text-[15.5px] font-semibold tracking-[-0.025em] text-[#141413]">
+                Itaú Hub
+              </span>
+            </Link>
 
-        <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          {/* Logo Pedra Itaú + Bootcamp DIO */}
-          <Link href="/" className="group flex items-center focus:outline-none">
-            <ItauBootcampLogo />
-          </Link>
+            <span
+              aria-hidden="true"
+              className="hidden h-4 w-px bg-[#E5E3DD] sm:inline-block"
+            />
 
-          {/* Navegação em cápsula segmentada (Desktop) */}
+            <Link
+              href="/"
+              className="hidden items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium text-[#6E6C66] transition hover:bg-[#F5F4F1] hover:text-[#141413] sm:inline-flex"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Apresentação
+            </Link>
+          </div>
+
+          {/* Centro: Apenas as 3 abas do produto (sem Arquitetura) */}
           <nav
-            aria-label="Navegação principal"
-            className="hidden items-center gap-1 rounded-full border border-[#EAE3DB] bg-white/90 p-1.5 shadow-xs lg:flex"
+            aria-label="Navegação da aplicação"
+            className="hidden items-center gap-1 rounded-full bg-[#F5F4F1] p-1 md:flex"
           >
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = pathname === href;
@@ -82,15 +83,15 @@ export function Header() {
                 <Link
                   key={href}
                   href={href}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all duration-200 ${
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-medium tracking-[-0.01em] transition-all duration-200 ${
                     active
-                      ? "bg-[#101828] text-white shadow-sm"
-                      : "text-[#525D73] hover:bg-[#F4EFE9] hover:text-[#101828]"
+                      ? "bg-[#141413] text-white shadow-xs"
+                      : "text-[#57554F] hover:text-[#141413]"
                   }`}
                 >
                   <Icon
                     className={`h-3.5 w-3.5 ${
-                      active ? "text-[#FF6200]" : "opacity-75"
+                      active ? "text-[#FF6200]" : "opacity-70"
                     }`}
                   />
                   {label}
@@ -99,39 +100,37 @@ export function Header() {
             })}
           </nav>
 
-          {/* Controles à direita: status ao vivo + privacidade de saldo */}
+          {/* Direita: Status compacto + privacidade de saldo */}
           <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-3 rounded-full border border-[#EAE3DB] bg-white px-3.5 py-1.5 shadow-2xs md:flex">
-              <ServiceDot
-                label="Checkout"
-                online={isCheckoutOnline}
-                demoMode={demoMode}
+            <button
+              type="button"
+              onClick={() => void refreshHealth()}
+              disabled={isChecking}
+              title={
+                bothOnline
+                  ? "APIs Java conectadas — clique para revalidar"
+                  : demoMode
+                    ? "Modo Demo ativo — clique para verificar APIs reais"
+                    : "Verificando conexão com APIs Java"
+              }
+              className="hidden items-center gap-2 rounded-full border border-[#EAE9E4] bg-white px-3 py-1.5 text-[12px] font-medium text-[#57554F] transition hover:border-[#D0CEC7] hover:text-[#141413] disabled:opacity-60 sm:inline-flex"
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  bothOnline ? "bg-emerald-500" : "bg-[#FF6200]"
+                }`}
               />
-              <span className="h-3.5 w-px bg-[#EAE3DB]" />
-              <ServiceDot
-                label="Budget AI"
-                online={isBudgetOnline}
-                demoMode={demoMode}
+              <span>{bothOnline ? "APIs Online" : demoMode ? "Demo" : "Offline"}</span>
+              <RefreshCw
+                className={`h-3 w-3 opacity-60 ${isChecking ? "animate-spin" : ""}`}
               />
-              <button
-                type="button"
-                onClick={() => void refreshHealth()}
-                disabled={isChecking}
-                title="Revalidar status dos microsserviços"
-                className="ml-0.5 rounded-full p-1 text-[#667085] transition hover:bg-[#F4EFE9] hover:text-[#101828] disabled:opacity-50"
-                aria-label="Atualizar status"
-              >
-                <RefreshCw
-                  className={`h-3 w-3 ${isChecking ? "animate-spin" : ""}`}
-                />
-              </button>
-            </div>
+            </button>
 
             <button
               type="button"
               onClick={toggleHideBalances}
               title={hideBalances ? "Mostrar valores" : "Ocultar valores"}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#EAE3DB] bg-white text-[#525D73] shadow-2xs transition hover:border-[#FF6200]/50 hover:text-[#FF6200]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#EAE9E4] bg-white text-[#57554F] transition hover:border-[#141413] hover:text-[#141413]"
               aria-label={
                 hideBalances ? "Mostrar saldos e valores" : "Ocultar saldos e valores"
               }
@@ -142,34 +141,26 @@ export function Header() {
                 <Eye className="h-4 w-4" />
               )}
             </button>
-
-            <Link
-              href="/budget"
-              className="hidden items-center gap-1.5 rounded-full bg-[#FF6200] px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-orange-600/20 transition hover:bg-[#E05200] sm:inline-flex"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              IA
-            </Link>
           </div>
         </div>
       </header>
 
-      {/* Tab Bar Mobile estilo Super-App nativo */}
+      {/* Tab Bar Mobile limpa (3 itens) */}
       <nav
         aria-label="Navegação mobile"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#EAE3DB] bg-white/95 px-2 pb-2 pt-1.5 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#EAE9E4] bg-white/95 px-2 pb-2 pt-1.5 backdrop-blur-xl md:hidden"
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-col items-center justify-center gap-1 rounded-2xl py-1.5 text-[11px] font-bold transition ${
+                className={`flex flex-col items-center justify-center gap-1 rounded-2xl py-1.5 text-[11px] font-semibold transition ${
                   active
-                    ? "bg-[#FFF4EC] text-[#FF6200]"
-                    : "text-[#667085] hover:text-[#101828]"
+                    ? "bg-[#FFF3EB] text-[#FF6200]"
+                    : "text-[#6E6C66] hover:text-[#141413]"
                 }`}
               >
                 <Icon className="h-4 w-4" />

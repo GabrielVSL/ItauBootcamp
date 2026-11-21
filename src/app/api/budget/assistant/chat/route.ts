@@ -1,34 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { AssistantResponse, ChatRequest } from "@/types/budget";
+import type { AssistantResponse } from "@/types/budget";
 import { jsonErrorResponse, proxyJsonRequest } from "@/lib/bff-proxy";
+import {
+  RATE_LIMITS,
+  attachSessionCookie,
+  checkRateLimit,
+  rateLimitErrorResponse,
+  readJsonBody,
+  resolveSessionContext,
+  verifySameOrigin,
+} from "@/lib/security";
+import { validateChatRequest } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
-  let body: ChatRequest;
-  try {
-    body = (await request.json()) as ChatRequest;
-  } catch {
-    return jsonErrorResponse({
-      status: 400,
-      title: "JSON inválido",
-      message: "Envie { message, generateAudio } no corpo da requisição.",
-      details: [],
-      service: "budget",
-    });
+  const originError = verifySameOrigin(request, "budget");
+  if (originError) return originError;
+
+  const limit = checkRateLimit(request, RATE_LIMITS.aiChat);
+  if (!limit.allowed) {
+    return rateLimitErrorResponse("budget", limit.retryAfterSeconds);
   }
 
+  const bodyResult = await readJsonBody(request, "budget", 16 * 1024);
+  if (!bodyResult.ok) return bodyResult.response;
+
+  const validated = validateChatRequest(bodyResult.data);
+  if (!validated.ok) {
+    return jsonErrorResponse(validated.error);
+  }
+
+  const session = resolveSessionContext(request);
   const result = await proxyJsonRequest<AssistantResponse>(
     "budget",
     "/api/v1/assistant/chat",
     {
       method: "POST",
-      body,
+      body: validated.data,
       timeoutMs: 35000,
+      sessionId: session.sessionId,
     },
   );
 
   if (!result.ok) {
-    return jsonErrorResponse(result.error);
+    return attachSessionCookie(jsonErrorResponse(result.error), session);
   }
 
-  return NextResponse.json(result.data, { status: result.status });
+  return attachSessionCookie(
+    NextResponse.json(result.data, { status: result.status }),
+    session,
+  );
 }

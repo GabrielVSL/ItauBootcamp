@@ -16,7 +16,7 @@ import { estimateCheckoutPricing } from "./catalog";
 const INITIAL_TRANSACTIONS: TransactionResponse[] = [
   {
     id: 101,
-    description: "Salário Mensal — Eng. Software Java",
+    description: "Salário Mensal",
     amount: 7200,
     type: "INCOME",
     category: "SALARY",
@@ -24,7 +24,7 @@ const INITIAL_TRANSACTIONS: TransactionResponse[] = [
   },
   {
     id: 102,
-    description: "Aluguel & Condomínio",
+    description: "Aluguel e Condomínio",
     amount: 2150,
     type: "EXPENSE",
     category: "HOUSING",
@@ -32,7 +32,7 @@ const INITIAL_TRANSACTIONS: TransactionResponse[] = [
   },
   {
     id: 103,
-    description: "Supermercado da Semana",
+    description: "Supermercado",
     amount: 640.5,
     type: "EXPENSE",
     category: "FOOD",
@@ -40,15 +40,15 @@ const INITIAL_TRANSACTIONS: TransactionResponse[] = [
   },
   {
     id: 104,
-    description: "Compra Loja — Pedido #901 (Teclado Mecânico Wireless Pro)",
-    amount: 339.81,
+    description: "Pedido #901 · Teclado Mecânico Wireless Pro",
+    amount: 343.86,
     type: "EXPENSE",
     category: "TECH",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
   },
   {
     id: 105,
-    description: "Plano de Saúde & Academia",
+    description: "Plano de Saúde e Academia",
     amount: 420,
     type: "EXPENSE",
     category: "HEALTH",
@@ -56,7 +56,7 @@ const INITIAL_TRANSACTIONS: TransactionResponse[] = [
   },
   {
     id: 106,
-    description: "Uber & Metrô",
+    description: "Uber e Metrô",
     amount: 185.9,
     type: "EXPENSE",
     category: "TRANSPORT",
@@ -165,18 +165,16 @@ export function getDemoOrderById(id: string | number): PedidoResponse | null {
 export function executeDemoCheckout(
   request: CheckoutRequest,
 ): { ok: true; data: PedidoResponse } | { ok: false; error: NormalizedApiError } {
-  // Elo 1: Estoque
+  // Validação de estoque
   for (const item of request.itens) {
     if (item.produtoId === "PROD-SEM-ESTOQUE") {
       return {
         ok: false,
         error: {
           status: 422,
-          title: "Unprocessable Entity — Regra de Estoque (Demo)",
-          message: `Produto "${item.nomeProduto}" (${item.produtoId}) está sem estoque disponível.`,
-          details: [
-            "Chain of Responsibility -> Elo 1 (ValidadorEstoque) interrompeu o fluxo.",
-          ],
+          title: "Produto sem estoque",
+          message: `"${item.nomeProduto}" está esgotado no momento.`,
+          details: [],
           service: "checkout",
         },
       };
@@ -186,11 +184,9 @@ export function executeDemoCheckout(
         ok: false,
         error: {
           status: 422,
-          title: "Unprocessable Entity — Limite de Estoque (Demo)",
-          message: `Produto "${item.nomeProduto}" (${item.produtoId}) possui apenas 3 unidades disponíveis (solicitado: ${item.quantidade}).`,
-          details: [
-            "Chain of Responsibility -> Elo 1 (ValidadorEstoque) rejeitou a quantidade.",
-          ],
+          title: "Quantidade acima do estoque",
+          message: `"${item.nomeProduto}" possui apenas 3 unidades disponíveis (você solicitou ${item.quantidade}).`,
+          details: [],
           service: "checkout",
         },
       };
@@ -200,26 +196,24 @@ export function executeDemoCheckout(
         ok: false,
         error: {
           status: 422,
-          title: "Unprocessable Entity — Estoque Insuficiente (Demo)",
-          message: `Limite máximo de 50 unidades excedido para ${item.produtoId}.`,
-          details: ["Chain of Responsibility -> Elo 1 (ValidadorEstoque)."],
+          title: "Limite por pedido excedido",
+          message: `O limite máximo é de 50 unidades por item.`,
+          details: [],
           service: "checkout",
         },
       };
     }
   }
 
-  // Strategy Frete
+  // Validação de frete
   if (request.modalidadeFrete !== "PAC" && request.modalidadeFrete !== "SEDEX") {
     return {
       ok: false,
       error: {
         status: 422,
-        title: "Unprocessable Entity — Modalidade de Frete Inválida (Demo)",
-        message: `Modalidade de frete "${request.modalidadeFrete}" não é suportada. Utilize PAC ou SEDEX.`,
-        details: [
-          "Strategy Pattern -> Nenhuma implementação FreteStrategy encontrada para a chave informada.",
-        ],
+        title: "Modalidade de frete inválida",
+        message: "Escolha PAC ou SEDEX para finalizar a entrega.",
+        details: [],
         service: "checkout",
       },
     };
@@ -232,25 +226,22 @@ export function executeDemoCheckout(
     request.pesoTotalKg,
   );
 
-  // Elo 2: Pagamento
+  // Validação de pagamento
   if (request.formaPagamento === "BOLETO" && pricing.valorItens > 5000) {
     return {
       ok: false,
       error: {
         status: 422,
-        title: "Unprocessable Entity — Limite de Boleto Excedido (Demo)",
+        title: "Limite de boleto excedido",
         message:
-          "Pagamentos via BOLETO possuem limite máximo de R$ 5.000,00 em itens.",
-        details: [
-          `Valor dos itens: R$ ${pricing.valorItens.toFixed(2)}`,
-          "Chain of Responsibility -> Elo 2 (ValidadorPagamento).",
-        ],
+          "Pagamentos via boleto têm limite máximo de R$ 5.000,00 em itens. Escolha Pix ou cartão.",
+        details: [`Valor dos itens: R$ ${pricing.valorItens.toFixed(2)}`],
         service: "checkout",
       },
     };
   }
 
-  // Elo 3: Cupom
+  // Validação de cupom
   const code = request.cupomDesconto?.trim().toUpperCase() || null;
   if (code) {
     if (code !== "DEV10" && code !== "BEMVINDO20") {
@@ -258,9 +249,9 @@ export function executeDemoCheckout(
         ok: false,
         error: {
           status: 422,
-          title: "Unprocessable Entity — Cupom Inválido (Demo)",
-          message: `Cupom "${code}" não existe ou expirou. Cupons válidos: DEV10, BEMVINDO20.`,
-          details: ["Chain of Responsibility -> Elo 3 (ValidadorCupom)."],
+          title: "Cupom inválido",
+          message: `O cupom "${code}" não existe ou expirou. Cupons ativos: DEV10 e BEMVINDO20.`,
+          details: [],
           service: "checkout",
         },
       };
@@ -270,10 +261,10 @@ export function executeDemoCheckout(
         ok: false,
         error: {
           status: 422,
-          title: "Unprocessable Entity — Valor Mínimo do Cupom (Demo)",
+          title: "Valor mínimo do cupom",
           message:
             "O cupom BEMVINDO20 exige um valor mínimo de R$ 100,00 em itens.",
-          details: ["Chain of Responsibility -> Elo 3 (ValidadorCupom)."],
+          details: [],
           service: "checkout",
         },
       };
@@ -315,11 +306,13 @@ export function executeDemoCheckoutWithBudget(
 
   let transaction: TransactionResponse | undefined;
   if (syncToBudget) {
-    const itemsSummary = result.data.itens
-      .map((i) => `${i.quantidade}x ${i.nomeProduto}`)
-      .join(", ");
+    const totalQty = result.data.itens.reduce((acc, i) => acc + i.quantidade, 0);
+    const shortTitle =
+      result.data.itens.length === 1 && totalQty === 1
+        ? `Pedido #${result.data.pedidoId} · ${result.data.itens[0].nomeProduto}`
+        : `Pedido #${result.data.pedidoId} · ${totalQty} itens na Loja`;
     transaction = addDemoTransaction({
-      description: `Compra Loja — Pedido #${result.data.pedidoId} (${itemsSummary})`,
+      description: shortTitle,
       amount: result.data.valorTotal,
       type: "EXPENSE",
       category,
@@ -362,7 +355,7 @@ export function simulateDemoAssistant(message: string): AssistantResponse {
     });
     const summary = getDemoSummary();
     return {
-      response: `[Modo Demo • Tool Calling Simulado] Registrei uma receita de R$ ${created.amount.toFixed(2)} na categoria ${created.category}. Seu saldo líquido atualizado agora é de R$ ${summary.netBalance.toFixed(2)}.`,
+      response: `Registrei uma receita de R$ ${created.amount.toFixed(2)}. Seu saldo atualizado agora é de R$ ${summary.netBalance.toFixed(2)}.`,
       timestamp: new Date().toISOString(),
     };
   }
@@ -375,7 +368,7 @@ export function simulateDemoAssistant(message: string): AssistantResponse {
     parsedAmount > 0
   ) {
     const created = addDemoTransaction({
-      description: "Despesa registrada via Consultor IA (Demo)",
+      description: "Despesa registrada via Consultor IA",
       amount: parsedAmount,
       type: "EXPENSE",
       category: lower.includes("uber") || lower.includes("transp")
@@ -386,7 +379,7 @@ export function simulateDemoAssistant(message: string): AssistantResponse {
     });
     const summary = getDemoSummary();
     return {
-      response: `[Modo Demo • Tool Calling Simulado] Lancei a despesa de R$ ${created.amount.toFixed(2)} (${created.category}). Seu saldo líquido agora está em R$ ${summary.netBalance.toFixed(2)}.`,
+      response: `Lancei a despesa de R$ ${created.amount.toFixed(2)}. Seu saldo agora está em R$ ${summary.netBalance.toFixed(2)}.`,
       timestamp: new Date().toISOString(),
     };
   }
@@ -397,15 +390,15 @@ export function simulateDemoAssistant(message: string): AssistantResponse {
     const verdict =
       remaining >= 0
         ? `Sim! Após a compra de R$ ${parsedAmount.toFixed(2)}, seu saldo projetado ficaria positivo em R$ ${remaining.toFixed(2)}.`
-        : `Cuidado: essa compra de R$ ${parsedAmount.toFixed(2)} deixaria seu saldo negativo em R$ ${remaining.toFixed(2)}, disparando o alerta de déficit.`;
+        : `Cuidado: essa compra de R$ ${parsedAmount.toFixed(2)} deixaria seu saldo negativo em R$ ${remaining.toFixed(2)}.`;
     return {
-      response: `[Modo Demo] Analisei seu resumo atual (Saldo: R$ ${summary.netBalance.toFixed(2)}). ${verdict}`,
+      response: `Analisei seu resumo atual (Saldo: R$ ${summary.netBalance.toFixed(2)}). ${verdict}`,
       timestamp: new Date().toISOString(),
     };
   }
 
   return {
-    response: `[Modo Demo] Seu resumo consolidado: Receitas de R$ ${summary.totalIncome.toFixed(2)}, Despesas de R$ ${summary.totalExpense.toFixed(2)} e Saldo Líquido de R$ ${summary.netBalance.toFixed(2)} (${summary.transactionCount} lançamentos). Para testar Tool Calling real com GPT + Whisper + TTS, inicie o Smart Budget Spring AI na porta 8080.`,
+    response: `Seu resumo atual: Receitas de R$ ${summary.totalIncome.toFixed(2)}, Despesas de R$ ${summary.totalExpense.toFixed(2)} e Saldo de R$ ${summary.netBalance.toFixed(2)} (${summary.transactionCount} lançamentos).`,
     timestamp: new Date().toISOString(),
   };
 }

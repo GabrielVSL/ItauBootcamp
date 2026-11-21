@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <path d="M32 3C50.8 3 61 11.4 61 32C61 52.6 50.8 61 32 61C13.2 61 3 52.6 3 32C3 11.4 13.2 3 32 3Z" fill="#FF6200"/>
-  <text x="32" y="40" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="21" letter-spacing="-0.8">itaú</text>
-  <circle cx="49" cy="17" r="3" fill="#FFF3E8" fill-opacity="0.9"/>
-</svg>

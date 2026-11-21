@@ -6,12 +6,12 @@ import {
   Loader2,
   Mic,
   Send,
-  Sparkles,
   Square,
   Upload,
   User,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import type { AssistantResponse } from "@/types/budget";
 import type { NormalizedApiError } from "@/types/bff";
@@ -40,7 +40,9 @@ const SUGGESTIONS = [
 ];
 
 interface AiConsultantPanelProps {
-  onAssistantCompleted: () => Promise<void>;
+  onAssistantCompleted?: () => Promise<void> | void;
+  onClose?: () => void;
+  compact?: boolean;
 }
 
 function speakWithBrowser(text: string): boolean {
@@ -59,17 +61,34 @@ function speakWithBrowser(text: string): boolean {
   }
 }
 
+const SAFE_AUDIO_DATA_URI =
+  /^data:audio\/(?:mpeg|mp3|wav|ogg|webm);base64,[A-Za-z0-9+/=\s]+$/;
+const SAFE_RAW_BASE64 = /^[A-Za-z0-9+/=\s]+$/;
+
+function toSafeAudioDataUri(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("data:")) {
+    return SAFE_AUDIO_DATA_URI.test(trimmed) ? trimmed : null;
+  }
+  return SAFE_RAW_BASE64.test(trimmed)
+    ? `data:audio/mp3;base64,${trimmed}`
+    : null;
+}
+
 export function AiConsultantPanel({
   onAssistantCompleted,
+  onClose,
+  compact = false,
 }: AiConsultantPanelProps) {
-  const { demoMode } = useAppStatus();
+  const { demoMode, notifyBudgetUpdated } = useAppStatus();
   const { notify } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Sou seu Consultor Financeiro com Spring AI + Tool Calling. Digite, grave no microfone ou envie um áudio — eu consulto e atualizo seu orçamento diretamente no banco!",
+      text: "Olá! Pergunte sobre seu saldo, registre um gasto por texto ou voz, ou simule uma compra.",
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -169,7 +188,8 @@ export function AiConsultantPanel({
       }
 
       appendAssistantReply(reply, "ai");
-      await onAssistantCompleted();
+      notifyBudgetUpdated();
+      await onAssistantCompleted?.();
     } catch {
       setChatError({
         status: 503,
@@ -247,7 +267,8 @@ export function AiConsultantPanel({
       }
 
       appendAssistantReply(reply, "ai-voice");
-      await onAssistantCompleted();
+      notifyBudgetUpdated();
+      await onAssistantCompleted?.();
     } catch {
       setChatError({
         status: 503,
@@ -333,52 +354,68 @@ export function AiConsultantPanel({
   }
 
   return (
-    <section className="flex h-[680px] flex-col overflow-hidden rounded-[28px] border border-[#EAE3DB] bg-white shadow-sm">
-      {/* Cabeçalho Obsidian + Pedra Itaú */}
-      <div className="relative overflow-hidden bg-[#0D1528] px-5 py-4 text-white">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#FF6200]/30 blur-2xl" />
-        <div className="relative flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <PedraMark className="h-10 w-10 shrink-0" />
-            <div>
-              <h2 className="font-display text-sm font-extrabold">
-                Consultor Financeiro IA
+    <section
+      className={`flex flex-col overflow-hidden rounded-[24px] border border-[#EAE9E4] bg-white ${
+        compact ? "h-[min(600px,calc(100svh-5.5rem))]" : "h-[660px]"
+      }`}
+    >
+      {/* Cabeçalho Obsidian limpo */}
+      <div className="relative overflow-hidden bg-[#120F17] px-5 py-4 text-white">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#FF6200]/25 blur-2xl" />
+        <div className="relative flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <PedraMark className="h-9 w-9 shrink-0" />
+            <div className="min-w-0">
+              <h2 className="truncate text-[14.5px] font-semibold tracking-[-0.015em]">
+                Consultor IA
               </h2>
-              <p className="text-[11px] text-slate-300">
-                Spring AI • Tool Calling • Whisper STT • Voz
+              <p className="truncate text-[11px] text-white/55">
+                Texto, microfone ou áudio
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setGenerateAudio((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold transition ${
-              generateAudio
-                ? "border-[#FF8A3D] bg-[#FF6200] text-white"
-                : "border-white/20 bg-white/10 text-slate-200 hover:bg-white/20"
-            }`}
-          >
-            {generateAudio ? (
-              <Volume2 className="h-3.5 w-3.5" />
-            ) : (
-              <VolumeX className="h-3.5 w-3.5" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setGenerateAudio((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition ${
+                generateAudio
+                  ? "border-[#FF8A3D] bg-[#FF6200] text-white"
+                  : "border-white/15 bg-white/[0.08] text-white/80 hover:bg-white/15"
+              }`}
+            >
+              {generateAudio ? (
+                <Volume2 className="h-3.5 w-3.5" />
+              ) : (
+                <VolumeX className="h-3.5 w-3.5" />
+              )}
+              Voz {generateAudio ? "ativa" : "off"}
+            </button>
+
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Fechar Consultor IA"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
             )}
-            Voz: {generateAudio ? "ON" : "OFF"}
-          </button>
+          </div>
         </div>
       </div>
 
       {/* Sugestões clicáveis */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-[#F2ECE6] bg-[#FBF9F6] px-4 py-2.5">
-        <Sparkles className="h-3.5 w-3.5 text-[#FF6200]" />
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-[#F0EFEA] bg-[#FAF9F7] px-4 py-2.5">
         {SUGGESTIONS.map((prompt) => (
           <button
             key={prompt}
             type="button"
             disabled={sending}
             onClick={() => void sendTextMessage(prompt)}
-            className="rounded-full border border-[#EAE3DB] bg-white px-3 py-1 text-[11px] font-semibold text-[#344054] transition hover:border-[#FF6200] hover:text-[#FF6200] disabled:opacity-50"
+            className="rounded-full border border-[#E6E4DE] bg-white px-3 py-1 text-[11px] font-medium text-[#45433E] transition hover:border-[#141413] hover:text-[#141413] disabled:opacity-50"
           >
             {prompt}
           </button>
@@ -425,22 +462,19 @@ export function AiConsultantPanel({
                 )}
                 <p className="whitespace-pre-wrap">{msg.text}</p>
 
-                {msg.audioBase64 && (
-                  <div className="mt-3 rounded-xl border border-[#EAE3DB] bg-[#FBF9F6] p-2">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#667085]">
-                      Resposta em áudio (Backend TTS)
-                    </p>
-                    <audio
-                      controls
-                      className="h-8 w-full"
-                      src={
-                        msg.audioBase64.startsWith("data:")
-                          ? msg.audioBase64
-                          : `data:audio/mp3;base64,${msg.audioBase64}`
-                      }
-                    />
-                  </div>
-                )}
+                {msg.audioBase64 &&
+                  (() => {
+                    const safeSrc = toSafeAudioDataUri(msg.audioBase64);
+                    if (!safeSrc) return null;
+                    return (
+                      <div className="mt-3 rounded-xl border border-[#EAE3DB] bg-[#FBF9F6] p-2">
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#667085]">
+                          Resposta em áudio
+                        </p>
+                        <audio controls className="h-8 w-full" src={safeSrc} />
+                      </div>
+                    );
+                  })()}
 
                 {!msg.audioBase64 && msg.spokenViaBrowser && (
                   <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#FFF4EC] px-2.5 py-1.5 text-[10px] font-semibold text-[#C84A00]">

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { RefreshCw, Sparkles, Wallet } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import type {
   FinancialSummaryResponse,
   TransactionCategory,
@@ -22,10 +22,9 @@ import { ApiErrorBanner } from "@/components/ui/ApiErrorBanner";
 import { BudgetSummaryCards } from "./BudgetSummaryCards";
 import { CategoryExpenseChart } from "./CategoryExpenseChart";
 import { TransactionsPanel } from "./TransactionsPanel";
-import { AiConsultantPanel } from "./AiConsultantPanel";
 
 export function BudgetView() {
-  const { demoMode } = useAppStatus();
+  const { demoMode, budgetVersion } = useAppStatus();
   const { notify } = useToast();
 
   const [summary, setSummary] = useState<FinancialSummaryResponse | null>(null);
@@ -42,7 +41,10 @@ export function BudgetView() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<NormalizedApiError | null>(null);
 
+  const requestSeqRef = useRef(0);
+
   const loadBudgetData = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
     setLoading(true);
     setLoadError(null);
 
@@ -72,8 +74,11 @@ export function BudgetView() {
         : Promise.resolve(null),
     ]);
 
+    if (seq !== requestSeqRef.current) return;
+
     if (summaryRes.status === "fulfilled") {
       const payload = await summaryRes.value.json();
+      if (seq !== requestSeqRef.current) return;
       if (summaryRes.value.ok) {
         setSummary(payload as FinancialSummaryResponse);
       } else {
@@ -85,6 +90,7 @@ export function BudgetView() {
     let allList: TransactionResponse[] = [];
     if (allTxRes.status === "fulfilled" && allTxRes.value.ok) {
       const data = (await allTxRes.value.json()) as TransactionResponse[];
+      if (seq !== requestSeqRef.current) return;
       allList = [...data].sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -102,6 +108,7 @@ export function BudgetView() {
       ) {
         const data =
           (await filteredTxRes.value.json()) as TransactionResponse[];
+        if (seq !== requestSeqRef.current) return;
         setFilteredTransactions(
           [...data].sort(
             (a, b) =>
@@ -115,12 +122,14 @@ export function BudgetView() {
       setFilteredTransactions(allList);
     }
 
-    setLoading(false);
+    if (seq === requestSeqRef.current) {
+      setLoading(false);
+    }
   }, [demoMode, filterCategory, filterType]);
 
   useEffect(() => {
     void loadBudgetData();
-  }, [loadBudgetData]);
+  }, [loadBudgetData, budgetVersion]);
 
   async function handleCreateTransaction(
     payload: TransactionRequest,
@@ -169,37 +178,25 @@ export function BudgetView() {
 
   return (
     <div className="space-y-8">
-      {/* Cabeçalho editorial */}
+      {/* Cabeçalho enxuto */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF4EC] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#E05200]">
-            <Sparkles className="h-3 w-3" />
-            Smart Budget Spring AI • Tool Calling + Voz
-          </span>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0D1528] text-[#FF8A3D] shadow-sm">
-              <Wallet className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="font-display text-2xl font-extrabold tracking-tight text-[#101828] sm:text-3xl">
-                Finanças &amp; Consultor IA
-              </h1>
-              <p className="text-xs text-[#525D73]">
-                Controle financeiro em tempo real com assistente conversacional
-                conectado direto ao banco.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-[-0.03em] text-[#141413] sm:text-3xl">
+            Finanças
+          </h1>
+          <p className="mt-1 text-[13.5px] text-[#6E6C66]">
+            Acompanhe receitas, despesas por categoria e seu extrato completo.
+          </p>
         </div>
         <button
           type="button"
           onClick={() => void loadBudgetData()}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE3DB] bg-white px-4 py-2 text-xs font-bold text-[#344054] shadow-2xs transition hover:border-[#FF6200]/40 hover:text-[#101828]"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE9E4] bg-white px-4 py-2 text-[12.5px] font-medium text-[#57554F] transition hover:border-[#141413] hover:text-[#141413]"
         >
           <RefreshCw
             className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
           />
-          Atualizar extrato
+          Atualizar
         </button>
       </div>
 
@@ -207,29 +204,22 @@ export function BudgetView() {
 
       <BudgetSummaryCards summary={summary} loading={loading} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-7">
-          <CategoryExpenseChart
-            transactions={allTransactions}
-            loading={loading}
-          />
-          <TransactionsPanel
-            transactions={filteredTransactions}
-            loading={loading}
-            filterCategory={filterCategory}
-            filterType={filterType}
-            onChangeFilterCategory={setFilterCategory}
-            onChangeFilterType={setFilterType}
-            onCreateTransaction={handleCreateTransaction}
-          />
-        </div>
+      {/* Faixa horizontal minimizável de Despesas por Categoria em largura total */}
+      <CategoryExpenseChart
+        transactions={allTransactions}
+        loading={loading}
+      />
 
-        <div className="lg:col-span-5">
-          <div className="sticky top-24">
-            <AiConsultantPanel onAssistantCompleted={loadBudgetData} />
-          </div>
-        </div>
-      </div>
+      {/* Extrato em largura total com altura fixa e paginação */}
+      <TransactionsPanel
+        transactions={filteredTransactions}
+        loading={loading}
+        filterCategory={filterCategory}
+        filterType={filterType}
+        onChangeFilterCategory={setFilterCategory}
+        onChangeFilterType={setFilterType}
+        onCreateTransaction={handleCreateTransaction}
+      />
     </div>
   );
 }

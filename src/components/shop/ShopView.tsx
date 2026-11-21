@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw, ShoppingBag, Sparkles } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RefreshCw, ShoppingBag } from "lucide-react";
 import type {
   FinancialSummaryResponse,
   TransactionCategory,
@@ -27,16 +27,16 @@ import {
 import { formatBRL } from "@/lib/format";
 import { ProductCatalog } from "./ProductCatalog";
 import { CartCheckoutPanel, type CartEntry } from "./CartCheckoutPanel";
-import { DesignPatternsLab } from "./DesignPatternsLab";
 import { OrdersHistory } from "./OrdersHistory";
 
 export function ShopView() {
-  const { demoMode } = useAppStatus();
+  const { demoMode, budgetVersion, notifyBudgetUpdated } = useAppStatus();
   const { notify } = useToast();
 
   const [cart, setCart] = useState<CartEntry[]>([
     { product: CATALOG_PRODUCTS[0], quantidade: 1 },
   ]);
+  const [cartOpen, setCartOpen] = useState(false);
   const [orders, setOrders] = useState<PedidoResponse[]>([]);
   const [budgetSummary, setBudgetSummary] =
     useState<FinancialSummaryResponse | null>(null);
@@ -44,7 +44,10 @@ export function ShopView() {
   const [submitting, setSubmitting] = useState(false);
   const [lastError, setLastError] = useState<NormalizedApiError | null>(null);
 
+  const requestSeqRef = useRef(0);
+
   const loadShopContext = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
     setLoading(true);
     if (demoMode) {
       setOrders(getDemoOrders());
@@ -58,8 +61,11 @@ export function ShopView() {
       fetch("/api/budget/transactions/summary", { cache: "no-store" }),
     ]);
 
+    if (seq !== requestSeqRef.current) return;
+
     if (ordersRes.status === "fulfilled" && ordersRes.value.ok) {
       const list = (await ordersRes.value.json()) as PedidoResponse[];
+      if (seq !== requestSeqRef.current) return;
       setOrders(
         [...list].sort(
           (a, b) =>
@@ -71,19 +77,31 @@ export function ShopView() {
     }
 
     if (summaryRes.status === "fulfilled" && summaryRes.value.ok) {
-      setBudgetSummary(
-        (await summaryRes.value.json()) as FinancialSummaryResponse,
-      );
+      const data = (await summaryRes.value.json()) as FinancialSummaryResponse;
+      if (seq !== requestSeqRef.current) return;
+      setBudgetSummary(data);
     } else {
       setBudgetSummary(null);
     }
 
-    setLoading(false);
+    if (seq === requestSeqRef.current) {
+      setLoading(false);
+    }
   }, [demoMode]);
 
   useEffect(() => {
     void loadShopContext();
-  }, [loadShopContext]);
+  }, [loadShopContext, budgetVersion]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCartOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
 
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
@@ -92,6 +110,20 @@ export function ShopView() {
     }
     return map;
   }, [cart]);
+
+  const cartUnits = useMemo(
+    () => cart.reduce((acc, item) => acc + item.quantidade, 0),
+    [cart],
+  );
+
+  const cartSubtotal = useMemo(
+    () =>
+      cart.reduce(
+        (acc, item) => acc + item.product.precoUnitario * item.quantidade,
+        0,
+      ),
+    [cart],
+  );
 
   function handleAddProduct(product: CatalogProduct) {
     setLastError(null);
@@ -198,7 +230,7 @@ export function ShopView() {
           setLastError(normalized);
           notify({
             tone: "error",
-            title: `${normalized.title} (HTTP ${normalized.status})`,
+            title: normalized.title,
             description: normalized.message,
           });
           return null;
@@ -213,16 +245,15 @@ export function ShopView() {
       ) {
         notify({
           tone: "warning",
-          title: `Pedido #${consolidated.pedido.pedidoId} confirmado (falha parcial no Budget)`,
+          title: `Pedido #${consolidated.pedido.pedidoId} confirmado`,
           description:
-            consolidated.budgetSync.error?.message ||
-            "A compra foi aprovada na Checkout API, mas o Smart Budget estava indisponível para o lançamento automático.",
+            "A compra foi aprovada, mas não foi possível lançar nas finanças agora.",
         });
       } else if (consolidated.budgetSync.succeeded) {
         notify({
           tone: "success",
-          title: `Pedido #${consolidated.pedido.pedidoId} confirmado e lançado!`,
-          description: `${formatBRL(consolidated.pedido.valorTotal)} registrado automaticamente no Smart Budget.`,
+          title: `Pedido #${consolidated.pedido.pedidoId} confirmado!`,
+          description: `${formatBRL(consolidated.pedido.valorTotal)} lançado automaticamente nas suas finanças.`,
         });
       } else {
         notify({
@@ -233,13 +264,15 @@ export function ShopView() {
       }
 
       setCart([]);
+      setCartOpen(false);
+      notifyBudgetUpdated();
       await loadShopContext();
       return consolidated;
     } catch {
       const err: NormalizedApiError = {
         status: 503,
-        title: "Falha de comunicação com o BFF",
-        message: "Não foi possível completar o checkout.",
+        title: "Falha de comunicação",
+        message: "Não foi possível completar o pedido.",
         details: [],
         service: "checkout",
       };
@@ -252,68 +285,88 @@ export function ShopView() {
 
   return (
     <div className="space-y-8">
-      {/* Cabeçalho editorial da Loja */}
+      {/* Cabeçalho único da Loja + Botão de abrir o Sidebar do Carrinho */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF4EC] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#E05200]">
-            <Sparkles className="h-3 w-3" />
-            Checkout API Design Patterns • GoF + SOLID
-          </span>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FF6200] text-white shadow-md shadow-[#FF6200]/25">
-              <ShoppingBag className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="font-display text-2xl font-extrabold tracking-tight text-[#101828] sm:text-3xl">
-                Itaú Shop &amp; Checkout
-              </h1>
-              <p className="text-xs text-[#525D73]">
-                Frete por Strategy, validações em Chain of Responsibility e
-                lançamento automático no Smart Budget.
-              </p>
-            </div>
+          <h1 className="text-2xl font-semibold tracking-[-0.03em] text-[#141413] sm:text-3xl">
+            Loja
+          </h1>
+          <p className="mt-1 text-[13.5px] text-[#6E6C66]">
+            Frete PAC grátis acima de R$ 500 · Lançamento integrado às suas
+            finanças.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => void loadShopContext()}
+            aria-label="Atualizar pedidos"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#EAE9E4] bg-white text-[#57554F] transition hover:border-[#141413] hover:text-[#141413]"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="inline-flex items-center gap-2.5 rounded-full bg-[#141413] px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#FF6200]"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            <span>Carrinho</span>
+            {cartUnits > 0 && (
+              <>
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-[11px] font-bold tabular-nums">
+                  {cartUnits}
+                </span>
+                <span className="hidden border-l border-white/20 pl-2.5 font-normal tabular-nums text-white/85 sm:inline">
+                  {formatBRL(cartSubtotal)}
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Catálogo em largura total (foco único na vitrine) */}
+      <ProductCatalog
+        cartQuantities={cartQuantities}
+        onAddProduct={handleAddProduct}
+        onUpdateQty={handleUpdateQty}
+      />
+
+      {/* Histórico de pedidos */}
+      <OrdersHistory orders={orders} loading={loading} />
+
+      {/* Sidebar Drawer lateral direito do Carrinho */}
+      {cartOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Carrinho de compras"
+          className="fixed inset-0 z-50 flex justify-end"
+        >
+          <div
+            onClick={() => setCartOpen(false)}
+            className="fixed inset-0 bg-[#120F17]/40 backdrop-blur-[2px] transition-opacity"
+          />
+          <div className="relative z-10 h-full w-full max-w-md shadow-[-20px_0_60px_-20px_rgba(18,15,23,0.35)]">
+            <CartCheckoutPanel
+              cart={cart}
+              budgetSummary={budgetSummary}
+              submitting={submitting}
+              lastError={lastError}
+              onClearError={() => setLastError(null)}
+              onUpdateQty={handleUpdateQty}
+              onRemoveItem={handleRemoveItem}
+              onClose={() => setCartOpen(false)}
+              onSubmitCheckout={handleSubmitCheckout}
+            />
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void loadShopContext()}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE3DB] bg-white px-4 py-2 text-xs font-bold text-[#344054] shadow-2xs transition hover:border-[#FF6200]/40 hover:text-[#101828]"
-        >
-          <RefreshCw
-            className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-          />
-          Sincronizar pedidos e saldo
-        </button>
-      </div>
-
-      {/* Catálogo + Carrinho Lateral */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-7 xl:col-span-8">
-          <ProductCatalog
-            cartQuantities={cartQuantities}
-            onAddProduct={handleAddProduct}
-            onUpdateQty={handleUpdateQty}
-          />
-        </div>
-        <div className="lg:col-span-5 xl:col-span-4">
-          <CartCheckoutPanel
-            cart={cart}
-            budgetSummary={budgetSummary}
-            submitting={submitting}
-            lastError={lastError}
-            onClearError={() => setLastError(null)}
-            onUpdateQty={handleUpdateQty}
-            onRemoveItem={handleRemoveItem}
-            onSubmitCheckout={handleSubmitCheckout}
-          />
-        </div>
-      </div>
-
-      {/* Laboratório de Design Patterns (colapsável) */}
-      <DesignPatternsLab />
-
-      {/* Lista de Pedidos Confirmados */}
-      <OrdersHistory orders={orders} loading={loading} />
+      )}
     </div>
   );
 }

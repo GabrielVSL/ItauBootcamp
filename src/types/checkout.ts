@@ -13,7 +13,7 @@ export interface CheckoutRequest {
   clienteNome: string;
   clienteEmail: string;
   itens: CheckoutItemRequest[];
-  modalidadeFrete: string; // Aceita ModalidadeFrete ou valores inválidos no Lab de Design Patterns (ex: "DRONE")
+  modalidadeFrete: ModalidadeFrete;
   formaPagamento: FormaPagamento;
   cupomDesconto: string | null;
   pesoTotalKg: number;

@@ -6,8 +6,10 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import type { HealthResponse } from "@/types/bff";
 
 interface AppStatusContextValue {
@@ -20,18 +22,44 @@ interface AppStatusContextValue {
   refreshHealth: () => Promise<HealthResponse | null>;
   isBudgetOnline: boolean;
   isCheckoutOnline: boolean;
+  budgetVersion: number;
+  notifyBudgetUpdated: () => void;
+  aiConsultantOpen: boolean;
+  openAiConsultant: () => void;
+  closeAiConsultant: () => void;
 }
 
 const AppStatusContext = createContext<AppStatusContextValue | null>(null);
 
 export function AppStatusProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
-  const [demoMode, setDemoMode] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [demoMode, setDemoModeState] = useState(false);
   const [hideBalances, setHideBalances] = useState(false);
+  const [budgetVersion, setBudgetVersion] = useState(0);
+  const [aiConsultantOpen, setAiConsultantOpen] = useState(false);
+  const userToggledDemoRef = useRef(false);
+
+  const setDemoMode = useCallback((enabled: boolean) => {
+    userToggledDemoRef.current = true;
+    setDemoModeState(enabled);
+  }, []);
 
   const toggleHideBalances = useCallback(() => {
     setHideBalances((prev) => !prev);
+  }, []);
+
+  const notifyBudgetUpdated = useCallback(() => {
+    setBudgetVersion((prev) => prev + 1);
+  }, []);
+
+  const openAiConsultant = useCallback(() => {
+    setAiConsultantOpen(true);
+  }, []);
+
+  const closeAiConsultant = useCallback(() => {
+    setAiConsultantOpen(false);
   }, []);
 
   const refreshHealth = useCallback(async () => {
@@ -41,6 +69,16 @@ export function AppStatusProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) return null;
       const data = (await res.json()) as HealthResponse;
       setHealth(data);
+
+      // Se ambos os backends Java estiverem offline na 1ª visita, entra em Modo Demo automaticamente
+      if (
+        !userToggledDemoRef.current &&
+        data.budget.status !== "online" &&
+        data.checkout.status !== "online"
+      ) {
+        setDemoModeState(true);
+      }
+
       return data;
     } catch {
       return null;
@@ -49,13 +87,15 @@ export function AppStatusProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Não faz polling de /api/health na Landing Page (/) para manter entrada leve
   useEffect(() => {
+    if (pathname === "/") return undefined;
     void refreshHealth();
     const interval = window.setInterval(() => {
       void refreshHealth();
     }, 30000);
     return () => window.clearInterval(interval);
-  }, [refreshHealth]);
+  }, [pathname, refreshHealth]);
 
   const isBudgetOnline = health?.budget.status === "online";
   const isCheckoutOnline = health?.checkout.status === "online";
@@ -71,16 +111,27 @@ export function AppStatusProvider({ children }: { children: React.ReactNode }) {
       refreshHealth,
       isBudgetOnline,
       isCheckoutOnline,
+      budgetVersion,
+      notifyBudgetUpdated,
+      aiConsultantOpen,
+      openAiConsultant,
+      closeAiConsultant,
     }),
     [
       health,
       isChecking,
       demoMode,
+      setDemoMode,
       hideBalances,
       toggleHideBalances,
       refreshHealth,
       isBudgetOnline,
       isCheckoutOnline,
+      budgetVersion,
+      notifyBudgetUpdated,
+      aiConsultantOpen,
+      openAiConsultant,
+      closeAiConsultant,
     ],
   );
 

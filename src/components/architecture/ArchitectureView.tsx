@@ -372,10 +372,10 @@ export function ArchitectureView() {
                   <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-[#FBF9F6] p-3.5 text-xs">
                     <div>
                       <span className="block text-[11px] text-[#667085]">
-                        Endpoint configurado
+                        Roteamento
                       </span>
                       <code className="mt-0.5 block break-all font-mono font-semibold text-[#101828]">
-                        {svc.health?.url ?? svc.portHint}
+                        Proxy via BFF ({svc.portHint})
                       </code>
                     </div>
                     <div>

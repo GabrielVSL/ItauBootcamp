@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { PieChart } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, PieChart } from "lucide-react";
 import type { TransactionCategory, TransactionResponse } from "@/types/budget";
 import { useAppStatus } from "@/context/AppStatusContext";
 import { CATEGORY_META, formatBRL } from "@/lib/format";
@@ -26,6 +26,7 @@ export function CategoryExpenseChart({
   loading,
 }: CategoryExpenseChartProps) {
   const { hideBalances } = useAppStatus();
+  const [minimized, setMinimized] = useState(false);
   const masked = (val: string) => (hideBalances ? "R$ •••" : val);
 
   const { slices, totalExpense } = useMemo(() => {
@@ -39,7 +40,7 @@ export function CategoryExpenseChart({
     }
 
     const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-    const radius = 56;
+    const radius = 58;
     const circumference = 2 * Math.PI * radius;
     let accumulatedPct = 0;
 
@@ -65,101 +66,136 @@ export function CategoryExpenseChart({
   }, [transactions]);
 
   return (
-    <section className="voxel-card p-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FFF4EC] text-[#FF6200]">
-          <PieChart className="h-5 w-5" />
+    <section className="rounded-[22px] border border-[#EAE9E4] bg-white px-6 py-5">
+      {/* Cabeçalho da faixa com botão Minimizar/Expandir */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F5F4F1] text-[#141413]">
+            <PieChart className="h-4.5 w-4.5" />
+          </span>
+          <div>
+            <h2 className="text-[15.5px] font-semibold tracking-[-0.02em] text-[#141413]">
+              Despesas por categoria
+            </h2>
+            {minimized && !loading && (
+              <p className="text-xs text-[#7A7872]">
+                {slices.length}{" "}
+                {slices.length === 1 ? "categoria" : "categorias"} · Total{" "}
+                <strong className="font-semibold text-[#141413]">
+                  {masked(formatBRL(totalExpense))}
+                </strong>
+              </p>
+            )}
+          </div>
         </div>
-        <div>
-          <h2 className="font-display text-base font-extrabold text-[#101828]">
-            Despesas por Categoria
-          </h2>
-          <p className="text-xs text-[#667085]">
-            Distribuição percentual das saídas registradas
-          </p>
-        </div>
+
+        <button
+          type="button"
+          onClick={() => setMinimized((prev) => !prev)}
+          aria-expanded={!minimized}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE9E4] bg-white px-3.5 py-1.5 text-[12px] font-medium text-[#57554F] transition hover:border-[#141413] hover:text-[#141413]"
+        >
+          {minimized ? (
+            <>
+              Expandir
+              <ChevronDown className="h-3.5 w-3.5" />
+            </>
+          ) : (
+            <>
+              Minimizar
+              <ChevronUp className="h-3.5 w-3.5" />
+            </>
+          )}
+        </button>
       </div>
 
-      {loading ? (
-        <div className="mt-6 h-48 animate-pulse rounded-2xl bg-[#F4EFE9]" />
-      ) : slices.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-[#EAE3DB] bg-[#FBF9F6] py-12 text-center text-xs text-[#667085]">
-          Nenhuma despesa registrada para exibir no gráfico.
-        </div>
-      ) : (
-        <div className="mt-6 grid grid-cols-1 items-center gap-6 sm:grid-cols-12">
-          <div className="flex justify-center sm:col-span-5">
-            <div className="relative h-44 w-44">
-              <svg
-                viewBox="0 0 160 160"
-                className="h-full w-full -rotate-90"
-                role="img"
-                aria-label="Gráfico de rosca de despesas por categoria"
-              >
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="56"
-                  fill="none"
-                  stroke="#F4EFE9"
-                  strokeWidth="22"
-                />
+      {/* Conteúdo horizontal em largura total */}
+      {!minimized && (
+        <div className="mt-5 border-t border-[#F0EFEA] pt-5">
+          {loading ? (
+            <div className="h-36 animate-pulse rounded-2xl bg-[#F5F4F1]" />
+          ) : slices.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#E5E3DD] bg-[#FAF9F7] py-10 text-center text-xs text-[#6E6C66]">
+              Nenhuma despesa registrada ainda.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-12">
+              {/* Donut com respiro interno para o texto */}
+              <div className="flex justify-center md:col-span-4 lg:col-span-3">
+                <div className="relative h-40 w-40">
+                  <svg
+                    viewBox="0 0 160 160"
+                    className="h-full w-full -rotate-90"
+                    role="img"
+                    aria-label="Gráfico de despesas por categoria"
+                  >
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="58"
+                      fill="none"
+                      stroke="#F2F1ED"
+                      strokeWidth="15"
+                    />
+                    {slices.map((slice) => (
+                      <circle
+                        key={slice.category}
+                        cx="80"
+                        cy="80"
+                        r="58"
+                        fill="none"
+                        stroke={slice.color}
+                        strokeWidth="15"
+                        strokeDasharray={slice.dashArray}
+                        strokeDashoffset={slice.dashOffset}
+                        className="transition-all duration-500"
+                      />
+                    ))}
+                  </svg>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
+                    <span className="text-[10px] font-medium text-[#8A8882]">
+                      Total saídas
+                    </span>
+                    <span className="mt-0.5 text-[13px] font-semibold tabular-nums text-[#141413]">
+                      {masked(formatBRL(totalExpense))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Barras distribuídas em 2 colunas aproveitando toda a largura */}
+              <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 md:col-span-8 lg:col-span-9">
                 {slices.map((slice) => (
-                  <circle
-                    key={slice.category}
-                    cx="80"
-                    cy="80"
-                    r="56"
-                    fill="none"
-                    stroke={slice.color}
-                    strokeWidth="22"
-                    strokeDasharray={slice.dashArray}
-                    strokeDashoffset={slice.dashOffset}
-                    className="transition-all duration-500"
-                  />
+                  <div key={slice.category} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="inline-flex items-center gap-2 font-medium text-[#141413]">
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: slice.color }}
+                        />
+                        {slice.label}
+                      </span>
+                      <span className="font-semibold tabular-nums text-[#141413]">
+                        {masked(formatBRL(slice.total))}{" "}
+                        <span className="font-normal text-[#8A8882]">
+                          ({slice.percentage.toFixed(0)}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#F2F1ED]">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.max(3, slice.percentage)}%`,
+                          backgroundColor: slice.color,
+                        }}
+                      />
+                    </div>
+                  </div>
                 ))}
-              </svg>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#98A2B3]">
-                  Total Saídas
-                </span>
-                <span className="mt-0.5 font-display text-sm font-extrabold tabular-nums text-[#101828]">
-                  {masked(formatBRL(totalExpense))}
-                </span>
               </div>
             </div>
-          </div>
-
-          <div className="space-y-3 sm:col-span-7">
-            {slices.map((slice) => (
-              <div key={slice.category} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="inline-flex items-center gap-2 font-semibold text-[#101828]">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: slice.color }}
-                    />
-                    {slice.label}
-                  </span>
-                  <span className="font-bold tabular-nums text-[#101828]">
-                    {masked(formatBRL(slice.total))}{" "}
-                    <span className="font-medium text-[#98A2B3]">
-                      ({slice.percentage.toFixed(1)}%)
-                    </span>
-                  </span>
-                </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#F4EFE9]">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.max(3, slice.percentage)}%`,
-                      backgroundColor: slice.color,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
       )}
     </section>
